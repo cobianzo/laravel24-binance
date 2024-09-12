@@ -17,6 +17,7 @@ function handleImageError() {
 </script>
 
 <template>
+    
     <Head title="Welcome" />
     <div class="bg-gray-50 text-black/50 dark:bg-black dark:text-white/50">
         <img
@@ -330,7 +331,7 @@ function handleImageError() {
                 </main>
 
                 <footer class="py-16 text-center text-sm text-black dark:text-white/70">
-                    Laravel v{{ laravelVersion }} (PHP v{{ phpVersion }})
+                    @cobianzo using Laravel v{{ laravelVersion }} (PHP v{{ phpVersion }})
                 </footer>
             </div>
         </div>

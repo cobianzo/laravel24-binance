@@ -14,6 +14,11 @@ Route::get('/', function () {
     ]);
 });
 
+Route::get('/currencies', function () {
+    return Inertia::render('Currencies', [ 'favCurrencies' => ['BTC/USDT'] ] );
+});
+
+
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
