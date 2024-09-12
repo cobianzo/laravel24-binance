@@ -15,6 +15,7 @@ const user = usePage().props.auth.user;
 const form = useForm({
     name: user.name,
     email: user.email,
+    binance_token: user.binance_token || ''
 });
 </script>
 
@@ -79,6 +80,18 @@ const form = useForm({
                 >
                     A new verification link has been sent to your email address.
                 </div>
+            </div>
+
+            <!-- Nuevo Campo: Binance Token -->
+            <div>
+                <InputLabel for="binance_token" value="Binance Token" />
+
+                <TextInput
+                    id="binance_token"
+                    type="text"
+                    class="mt-1 block w-full"
+                    v-model="form.binance_token"
+                />
             </div>
 
             <div class="flex items-center gap-4">

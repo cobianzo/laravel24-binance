@@ -31,6 +31,11 @@ class ProfileController extends Controller
     {
         $request->user()->fill($request->validated());
 
+        // Our extra fields:
+        if ($request->has('binance_token')) {
+            $request->user()->binance_token = $request->input('binance_token');
+        }
+
         if ($request->user()->isDirty('email')) {
             $request->user()->email_verified_at = null;
         }
