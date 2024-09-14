@@ -1,14 +1,11 @@
 import axios from 'axios';
-
-export interface BinancePriceResponse {
-  symbol: string;
-  price: string;
-}
+import { TickerPriceType } from '@/types/ticker';
 
 // Función para obtener el precio de una moneda específica
-export const getBinancePrice = async (symbol: string): Promise<BinancePriceResponse> => {
+// returns { symbol: BTCUSTD, price: 56452.0004344}
+export const getBinancePrice = async (symbol: string): Promise<TickerPriceType> => {
   try {
-    const response = await axios.get<BinancePriceResponse>(`/binance/prices/${symbol}`);
+    const response = await axios.get<TickerPriceType>(`/binance/prices/${symbol}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching Binance price:', error);

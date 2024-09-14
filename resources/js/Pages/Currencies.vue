@@ -1,70 +1,81 @@
 <template>
-    <Head title="Welcome" />
-    <div class="container mx-auto bg-gray-50 min-h-screen p-4">
-        <h1 class="text-3xl font-bold">Currencies</h1>
-        <h2>{{ test }}</h2>
-        <div class="container mx-auto p-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div
-                v-for="currency in currencies"
-                :key="currency.symbol"
-                class="p-4 bg-gray-100 rounded-lg shadow-md flex justify-between items-center"
-            >
-                <span class="font-semibold text-xl">{{ currency.symbol }}</span>
-                <span class="text-success font-bold text-xl">{{ currency.price }}</span>
-            </div>
+    <Head title="Currencies" />
+
+    <AuthenticatedLayout>
+        <template #header>
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Currencies</h2>
+        </template>
+
+        <div class="py-12">
+            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                    <div class="p-6 text-gray-900 dark:text-gray-100">
+                        <h1 class="text-3xl font-bold mb-4">Currencies</h1>
+                        <div class="p-4 bg-gray-100 text-dark font-bold rounded-lg shadow-md flex-col justify-between items-center">
+                            Add
+                            <AddFavTicker :tickers="allTickers" :test="test" />
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div
+                                v-for="currency in currencies"
+                                :key="currency.symbol"
+                                class="p-4 bg-gray-100 rounded-lg shadow-md flex justify-between items-center"
+                            >
+                                <span class="font-semibold text-xl text-dark">{{ currency.symbol }}</span>
+                                <span class="text-success font-bold text-xl">{{ currency.price }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+    </AuthenticatedLayout>
 </template>
 
 <script setup lang="ts">
+
+// Partials
+import AddFavTicker from './Currencies/AddFavTicker.vue';
+
 // Inertia dependencies
 import { Head, Link } from '@inertiajs/vue3';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { TickerType, TickerPriceType } from '@/types/ticker';
 
 // Vue dependencies
 import { onMounted, ref } from 'vue';
 
-// Internal libraries
-import axios from 'axios';
-
 // Internal dependencies
 import { getBinancePrice } from '@/api/binanceApi'; // Importa la función del módulo binanceApi
 
-
+// This comes from the PHP.
 const props = defineProps<{
-    favCurrencies: string[],
+    favTickers: string[],
+    allTickers: TickerType[] | null,
+    test: string
 }>();
 
-
-const currencies = ref([]);
+// fav currencies with all the info for current user.
+const currencies = ref<TickerPriceType[]>([]);
 
 onMounted(async () => {
-    // retrieve currencies from Binance API using axios
-    const fetchPrice = async (symbol) => {
-            try {
-                const data = await getBinancePrice(symbol);
-                return data;
-            } catch (error) {
-                console.error('Failed to fetch price:', error);
-                return null;
-            }
-        };
+    
+    console.log('all TEST: ', props.test );
+    console.log('all tickers: ', props.allTickers );
 
-    const mapRequests = props.favCurrencies?.map(async (pair) => {
-        const [origin, destination] = pair.split('/');
-        const binanceReponse = await fetchPrice(origin+destination);
-        console.log('todelete: ', pair, binanceReponse);
-        return {
-            origin,
-            destination,
-            ...binanceReponse,
+    // async filling of the price for every fav currency.
+    // @TODO: get current amount in user's account.
+    props.favTickers.forEach( async function(s) {
+        const price = await getBinancePrice(s);
+        if (price) {
+            currencies.value.push(price as TickerPriceType);
         }
     });
 
-    const arrayCurrencies = await Promise.all(mapRequests);
-    currencies.value = arrayCurrencies;
-    console.log('todelete2: ', arrayCurrencies);
+    // not warranty that currencies.value is completed at this line.
+
+    
 }); // end Mount
 </script>
 

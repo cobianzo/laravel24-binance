@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BinanceController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -15,8 +16,12 @@ Route::get('/', function () {
 });
 
 Route::get('/currencies', function () {
-    return Inertia::render('Currencies', [ 'favCurrencies' => ['BTC/USDT'] ] );
-});
+    return Inertia::render('Currencies', [ 
+        'favTickers' => ['BTCUSDT'],
+        'allTickers' => BinanceController::getAllTickers(),
+        'test' => BinanceController::test(),
+    ] );
+})->middleware(['auth', 'verified'])->name('currencies');
 
 
 Route::get('/dashboard', function () {
