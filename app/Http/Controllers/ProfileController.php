@@ -25,7 +25,7 @@ class ProfileController extends Controller
     }
 
     /**
-     * Update the user's profile information.
+     * Update the user's profile information from Edit profile page.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
@@ -44,6 +44,36 @@ class ProfileController extends Controller
 
         return Redirect::route('profile.edit');
     }
+
+    /**
+     * POST: Adds a new favorite ticker to the authenticated user's list of favorite tickers.
+     * body: {
+     *  ticker: 'BTCUSDT'
+     * }
+     *
+     * @param Request $request The incoming HTTP request containing the ticker to add.
+     * @return \Illuminate\Http\JsonResponse A JSON response containing the updated list of favorite tickers.
+     */
+    public function addFavTicker(Request $request)
+    {
+        $user   = auth()->user(); // Obtener el usuario autenticado
+        $ticker = $request->input('ticker');
+
+        // Verificar si el usuario ya tiene tickers favoritos
+        $favTickers = json_decode( $user->fav_tickers ?? '[]', true );
+
+        // Evitar duplicados
+        if (!in_array($ticker, $favTickers)) {
+            $favTickers[] = $ticker; // Añadir el nuevo ticker
+        }
+
+        // Guardar los tickers favoritos actualizados en la base de datos
+        $user->fav_tickers = $favTickers;
+        $user->save();
+
+        return response()->json(['success' => true, 'fav_tickers' => $favTickers]);
+    }
+
 
     /**
      * Delete the user's account.

@@ -17,7 +17,7 @@ Route::get('/', function () {
 
 Route::get('/currencies', function () {
     return Inertia::render('Currencies', [ 
-        'favTickers' => ['BTCUSDT'],
+        'favTickers' => json_decode( auth()->user()->fav_tickers ?? '[]', true ),
         'allTickers' => BinanceController::getAllTickers(),
         'test' => BinanceController::test(),
     ] );

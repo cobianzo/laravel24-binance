@@ -8,15 +8,18 @@
 
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
                     <div class="p-6 text-gray-900 dark:text-gray-100">
                         <h1 class="text-3xl font-bold mb-4">Currencies</h1>
-                        <div class="p-4 bg-gray-100 text-dark font-bold rounded-lg shadow-md flex-col justify-between items-center">
-                            Add
+                        <div class="p-4 bg-gray-100 text-dark font-bold rounded-lg shadow-md flex-col justify-between items-center mb-4">
                             <AddFavTicker :tickers="allTickers" :test="test" />
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div v-if="!currencies.length" class="p-4 bg-gray-100 rounded-lg shadow-md flex justify-center items-center">
+                                <span class="font-semibold text-xl text-dark">You don't have any favourite tickers selected yet.</span>
+                            </div>
+
                             <div
                                 v-for="currency in currencies"
                                 :key="currency.symbol"
@@ -46,23 +49,26 @@ import { TickerType, TickerPriceType } from '@/types/ticker';
 // Vue dependencies
 import { onMounted, ref } from 'vue';
 
-// Internal dependencies
-import { getBinancePrice } from '@/api/binanceApi'; // Importa la función del módulo binanceApi
+// Libraries
+import axios from 'axios';
+
+// Internal dependencies (binanceApi)
+import { getBinancePrice } from '@/api/binanceApi';
 
 // This comes from the PHP.
 const props = defineProps<{
     favTickers: string[],
-    allTickers: TickerType[] | null,
     test: string
 }>();
 
 // fav currencies with all the info for current user.
 const currencies = ref<TickerPriceType[]>([]);
+const allTickers = ref<TickerType[]>([]);
 
 onMounted(async () => {
     
     console.log('all TEST: ', props.test );
-    console.log('all tickers: ', props.allTickers );
+    
 
     // async filling of the price for every fav currency.
     // @TODO: get current amount in user's account.
@@ -73,6 +79,15 @@ onMounted(async () => {
         }
     });
 
+    try {
+        const allTickersResponse = await axios.get<TickerType[]>(`/binance/alltickers`);
+        allTickers.value =  allTickersResponse.data;
+    } catch (error) {
+        console.error('Error fetching Binance price:', error);
+        throw error;
+    }
+    
+    console.log('all tickers: ', allTickers.value );
     // not warranty that currencies.value is completed at this line.
 
     
