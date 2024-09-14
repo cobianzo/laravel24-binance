@@ -11,4 +11,7 @@ Route::get('/binance/prices/{symbol}', [ BinanceController::class, 'getTickerPri
 // > return { "symbol": "BTCUSDT", "price": "58071.21000000" }
 
 Route::get('/binance/alltickers', [ BinanceController::class, 'getAllTickers' ]);
+Route::put('/user/fav-tickers', [ProfileController::class, 'getFavTicker'])->middleware('auth');
 Route::post('/user/fav-tickers', [ProfileController::class, 'addFavTicker'])->middleware('auth');
+Route::delete('/user/fav-tickers/{ticker}', [ProfileController::class, 'deleteFavTicker'])->middleware('auth');
+

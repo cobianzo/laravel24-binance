@@ -2,7 +2,7 @@
 
   <h2>Add a favourite ticker</h2>
   <div class="lookup-wrapper max-w-md">
-    <Lookupinput :loading="tickers === null" :items="tickers !== null ? items : []" :selectItem="mySelect" />
+    <Lookupinput :loading="allTickers === null" :items="allTickers !== null ? items : []" :selectItem="addFavWhenItemSelected" />
   </div>
 
 </template>
@@ -12,23 +12,25 @@
 import { TickerType } from '@/types/ticker';
 
 // Vue e intertia 
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
 import axios from 'axios';
 
 
 // Internal Components dependencies
 import Lookupinput, {LookupItemType} from '@/Components/LookupInput.vue';
 
+// props sent by parent.
 const props = defineProps<{
-  tickers: TickerType[] | null,
+  allTickers: TickerType[] | null,
+  updateFavTickersFrom: () => void
   test: string
 }>();
 
 const items = computed(() => {
-  return props.tickers === null ? [] : props.tickers.map(t => ({ label: t.symbol, value: t.symbol }));
+  return props.allTickers === null ? [] : props.allTickers.map(t => ({ label: t.symbol, value: t.symbol }));
 });
 
-function mySelect(item: LookupItemType): void {
+function addFavWhenItemSelected(item: LookupItemType): void {
   const ticker: string = String(item.value);
   
   
@@ -36,6 +38,7 @@ function mySelect(item: LookupItemType): void {
   // Enviar una petición POST al backend para añadir el ticker favorito
   axios.post('/user/fav-tickers', { ticker })
     .then((response) => {
+      props.updateFavTickersFrom();
       console.log('Ticker añadido con éxito', response.data); // TODELETE
     })
     .catch((error) => {

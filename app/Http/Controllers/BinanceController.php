@@ -37,7 +37,7 @@ class BinanceController extends Controller
      */
     public function getTickerPrice( string $symbol ) : \Illuminate\Http\JsonResponse
     {
-        
+        // @TODO: save the API base endpoint as a const.
         $response = Http::get("https://api.binance.com/api/v3/ticker/price", [
             'symbol' => $symbol
         ]);

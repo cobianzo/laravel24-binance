@@ -46,7 +46,22 @@ class ProfileController extends Controller
     }
 
     /**
-     * POST: Adds a new favorite ticker to the authenticated user's list of favorite tickers.
+     * CRUD for `fav_tickers` for User Table
+     * Endpoint: `/user/fav-tickers`
+     *      PUT: retrieve list
+     *      POST: add the given ticker
+     *      DELETE: delete the given ticker
+     * 
+     * @TODO: do a clean , specially before saving the list on update and delete. Clean null ...
+     * 
+     */
+
+
+
+    /**
+     * Adds a new favorite ticker to the authenticated user's list of favorite tickers.
+     * Usage: 
+     * POST /user/fav-tickers
      * body: {
      *  ticker: 'BTCUSDT'
      * }
@@ -68,12 +83,49 @@ class ProfileController extends Controller
         }
 
         // Guardar los tickers favoritos actualizados en la base de datos
-        $user->fav_tickers = $favTickers;
+        $user->fav_tickers = array_filter( $favTickers, fn($item) => ! empty($item) );
         $user->save();
 
         return response()->json(['success' => true, 'fav_tickers' => $favTickers]);
     }
 
+    /**
+     * Retrieves the authenticated user's list of favorite tickers.
+     * PUT /user/fav-tickers
+     * 
+     * @param Request $request The incoming HTTP request.
+     * @return \Illuminate\Http\JsonResponse A JSON response containing the list of favorite tickers.
+     */
+    public function getFavTicker(Request $request) {
+        $user       = auth()->user();
+        $favTickers = json_decode( $user->fav_tickers ?? '[]', true );
+        $favTickers = array_filter( $favTickers, fn($item) => ! empty($item) );
+        return response()->json(array_values($favTickers));
+    }
+
+    
+    /**
+     * Delete one ticker from the user's list of favorite tickers.
+     * DELETE /user/fav-ticker/BTCUSDT
+     * 
+     * @param string $ticker
+     * @return \Illuminate\Http\JsonResponse A JSON response containing the updated list of favorite tickers.
+     */
+    public function deleteFavTicker( string $ticker ) {
+        $user       = auth()->user();
+        $favTickers = json_decode( $user->fav_tickers ?? '[]', true );
+
+        if (in_array($ticker, $favTickers)) {
+            $favTickers = array_diff($favTickers, [$ticker]);
+        } else {
+            return response()->json(['success' => true, 'note' => 'ticker not found', 'fav_tickers' => $favTickers]);
+        }
+
+        $user->fav_tickers = array_filter( $favTickers, fn($item) => ! empty($item) );
+        $user->save();
+
+        return response()->json(['success' => true, 'fav_tickers' => array_values($favTickers)]);
+    }
 
     /**
      * Delete the user's account.
