@@ -17,12 +17,12 @@
                         </div>
 
                         <nav class="flex justify-start mb-4" aria-label="Tabs">
-                            <button @click="selectedTab = 'tab-favourites'" 
-                                :class="{ 'bg-gray-100  dark:bg-white-700 text-accent hover:text-accent dark:text-dark': selectedTab === 'tab-favourites' }"
-                                class="py-2 px-4 rounded-lg text-gray-500 hover:text-gray-800">Favourites</button>
-                            <button @click="selectedTab = 'tab-portfolio'" 
-                                :class="{ 'bg-gray-100  dark:bg-white-700 text-accent hover:text-accent dark:text-dark': selectedTab === 'tab-portfolio' }"
-                                class="py-2 px-4 rounded-lg text-gray-500 hover:text-gray-800">Portfolio</button>
+                            <button @click="selectedTab = 'tab-favourites'; saveOptions({ selectedTab: 'tab-favourites' });" 
+                                :class="{ 'dark:bg-white-700 text-gray-900 hover:text-gray-900 dark:text-dark border-b border-accent': selectedTab === 'tab-favourites' }"
+                                class="py-2 px-4 text-gray-500 hover:text-gray-800">Favourites</button>
+                            <button @click="selectedTab = 'tab-portfolio'; saveOptions({ selectedTab: 'tab-portfolio' });" 
+                                :class="{ 'dark:bg-white-700 text-gray-900 hover:text-gray-900 dark:text-dark border-b border-accent': selectedTab === 'tab-portfolio' }"
+                                class="py-2 px-4 text-gray-500 hover:text-gray-800">Portfolio</button>
                         </nav>
                         <!-- Paneles de contenido para desktop -->
                         <div class="mt-4">
@@ -61,8 +61,10 @@ import { onMounted, watchEffect, ref } from 'vue';
 // Libraries
 import axios from 'axios';
 
-// Internal dependencies (binanceApi)
+// Internal dependencies (binanceApi and Localstorage options for the selected tab)
 import { getBinancePrice, getUserBalances } from '@/api/binanceApi';
+import { getOptions, saveOptions } from '@/utils/localStorage-CRUD';
+
 
 // This comes from the PHP.
 const props = defineProps<{
@@ -77,7 +79,7 @@ const favTickersWithPrice = ref<TickerPriceType[]|null>(null);
 const balances = ref<BalanceType[]|null>(null);
 
 // for ui:
-const selectedTab = ref<string>('tab-favourites');
+const selectedTab = ref<string>(getOptions('selectedTab')?? 'tab-favourites');
 
 // computed states (add the price to favTickersReactive)
 // Watch or trigger this effect when 'favTickersReactive' changes
@@ -106,6 +108,7 @@ function updateFavTickersFrom() {
         favTickersReactive.value = response.data;
     } );;
     selectedTab.value = 'tab-favourites';
+    saveOptions({ selectedTab: 'tab-favourites' });
 }
 
 function deleteTicker(tickerSymbol: string): void {

@@ -2,7 +2,8 @@
   import { BalanceType } from '@/types/ticker';
   import { watch, ref } from 'vue';
   import { getBinancePrice } from '@/api/binanceApi';
-
+  import { formatNumber } from '@/utils/helpers';
+  
   // propd coming from the parent
   const props = defineProps<{
     balances: BalanceType[] | null,
@@ -12,6 +13,21 @@
   // state. For every currency in the portfolio, we ask to biance the price in USDT
   const balancesWithPrice = ref<{ [symbol: string] : { price: number | null, balanceValue: number } }>({});
 
+  /**
+   * Update UI for one currenct card
+   */
+  const updateBalanceWithPrice = async ( symbol: string, amount: number) => {
+    const price = await getUSDPriceForSymbol(symbol);
+    if (price) {
+      const currencyInfo = {
+        price,
+        balanceValue: amount * price
+      }
+      balancesWithPrice.value[symbol] = currencyInfo;
+    }
+    return price;
+  }
+
   const updateBalancesWithPrice = async (newBalances : BalanceType[] | null) => {
     if (newBalances === null) {
         balancesWithPrice.value = {};
@@ -19,14 +35,7 @@
         // let newBalancesWithPrice: { [ticker: string]: number } = {};
         
         const setOfPromises = newBalances.map(async (balance) => {
-            const price = await getUSDPriceForSymbol(balance.symbol);
-            if (price) {
-              const currencyInfo = {
-                price,
-                balanceValue: balance.amount * price
-              }
-              balancesWithPrice.value[balance.symbol] = currencyInfo;
-            }
+          updateBalanceWithPrice(balance.symbol, balance.amount);
         });
         
         await Promise.all(setOfPromises);
@@ -66,26 +75,20 @@
     updateBalancesWithPrice(props.balances);
   }
 
-  function formatNumber(value: number | null ): string {
-    if (!value) return '';
-    return parseFloat(value.toString()).toString();
-  }
-
 </script>
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
     <div
         v-if="props.balances !== null"
         v-for="currencyAndBalance in props.balances"
         :key="currencyAndBalance.symbol"
-        class="p-4 bg-gray-100 rounded-lg shadow-md flex flex-col justify-between items-center cursor-pointer hover:bg-red-100"
-        @click="props.selectBalance(currencyAndBalance)"
+        class="p-4 bg-gray-100 rounded-lg shadow-md flex flex-col justify-between items-center cursor-pointer hover:bg-green-100"
+        @click="props.selectBalance(currencyAndBalance); updateBalanceWithPrice(currencyAndBalance.symbol, currencyAndBalance.amount);"
     >
-        <!-- @TODO: Create this as a separated component -->
         <div class="w-full grid grid-cols-2 gap-2">
           <span class="font-semibold text-xl text-dark">{{ currencyAndBalance.symbol }}</span>
           <span class="text-success font-bold text-xl text-right">
-            {{ formatNumber(currencyAndBalance.amount) }}
+            {{ formatNumber(currencyAndBalance.amount, 5) }}
           </span>
         </div>
         <div class="w-full grid grid-cols-2 gap-2">
