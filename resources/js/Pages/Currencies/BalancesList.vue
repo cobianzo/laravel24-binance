@@ -6,7 +6,7 @@
   
   // propd coming from the parent
   const props = defineProps<{
-    loading?: Ref<string>,
+    updateLoading?: (arg0: string) => void,
     balances: BalanceType[] | null,
     selectBalance: (arg0: BalanceType) => void
   }>();
@@ -33,16 +33,18 @@
     if (newBalances === null) {
         balancesWithPrice.value = {};
       } else {
-        alert('TODELETE reaclculo de todos los symbols ');
+        // alert('TODELETE reaclculo de todos los symbols ');
         
-        // if (props.loading) props.loading.value = 'page';
+        if (props.updateLoading) props.updateLoading('page');
 
         const setOfPromises = newBalances.map(async (balance) => {
-          updateBalanceWithPrice(balance.symbol, balance.amount);
+          return updateBalanceWithPrice(balance.symbol, balance.amount);
         });
         
-        await Promise.all(setOfPromises);
-        console.log('Finished CALCULATED all balances in USDT: ', balancesWithPrice.value );
+        Promise.all(setOfPromises).finally( () => {
+          alert('acabo');
+          if (props.updateLoading) props.updateLoading('');
+        });
         // if (props.loading) props.loading.value = '';
         
         // @TODO: Now we could sort the currencies in order of balance in USDT.
@@ -76,8 +78,11 @@
   }
 
   function myDebugBtnClick() {
-    console.log('clicked!!');
-    updateBalancesWithPrice(props.balances);
+    if (props.updateLoading) {
+      console.log('clicked!!');  
+      props.updateLoading('page');
+      updateBalancesWithPrice(props.balances);
+    }
   }
 
 </script>
@@ -90,24 +95,25 @@
         class="p-4 bg-gray-100 rounded-lg shadow-md flex flex-col justify-between items-center cursor-pointer hover:bg-green-100"
         @click="props.selectBalance(currencyAndBalance); updateBalanceWithPrice(currencyAndBalance.symbol, currencyAndBalance.amount);"
     >
-        <div class="w-full grid grid-cols-2 gap-2">
-          <span class="font-semibold text-xl text-dark">{{ currencyAndBalance.symbol }}</span>
-          <span class="text-success font-bold text-xl text-right">
-            {{ formatNumber(currencyAndBalance.amount, 5) }}
-          </span>
-        </div>
-        <div class="w-full grid grid-cols-2 gap-2">
-          <span class="font-semibold text-sm text-gray-900">{{
-            balancesWithPrice[ currencyAndBalance.symbol ] ?
-            formatNumber(balancesWithPrice[ currencyAndBalance.symbol ].price)
-            :
-            ''
-          }}</span>
-          <span v-if="balancesWithPrice[ currencyAndBalance.symbol ]?.balanceValue"
-            class="font-semibold text-sm text-gray-900 text-right">
-            <b class="text-gray-500 pr-2">$</b>{{ Math.round(balancesWithPrice[ currencyAndBalance.symbol ].balanceValue) }}
-          </span>
-        </div>
+      
+      <div class="w-full grid grid-cols-2 gap-2">
+        <span class="font-semibold text-xl text-dark">{{ currencyAndBalance.symbol }}</span>
+        <span class="text-success font-bold text-xl text-right">
+          {{ formatNumber(currencyAndBalance.amount, 5) }}
+        </span>
+      </div>
+      <div class="w-full grid grid-cols-2 gap-2">
+        <span class="font-semibold text-sm text-gray-900">{{
+          balancesWithPrice[ currencyAndBalance.symbol ] ?
+          formatNumber(balancesWithPrice[ currencyAndBalance.symbol ].price)
+          :
+          ''
+        }}</span>
+        <span v-if="balancesWithPrice[ currencyAndBalance.symbol ]?.balanceValue"
+          class="font-semibold text-sm text-gray-900 text-right">
+          <b class="text-gray-500 pr-2">$</b>{{ Math.round(balancesWithPrice[ currencyAndBalance.symbol ].balanceValue) }}
+        </span>
+      </div>
     </div>
   </div>
   <div class="col-span-2 p-4 flex justify-center items-center">

@@ -6,7 +6,7 @@
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Currencies</h2>
         </template>
-
+        
         <div id="currencies-container" class="py-12" :class="{ 'loading': loading === 'page' }">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
@@ -36,7 +36,7 @@
                             </div>
                             <div v-show="selectedTab === 'tab-portfolio'" class="p-4 mb-2 bg-white rounded-lg shadow-md text-dark">
                                 Contenido del panel 2
-                                <BalancesList :balances="balances" :selectBalance="selectBalance" :loading="loading" />
+                                <BalancesList :balances="balances" :selectBalance="selectBalance" :updateLoading="updateLoading" />
                             </div>
                         </div>
                         
@@ -86,6 +86,7 @@ const balances = ref<BalanceType[]|null>(null);
 // for ui:
 const selectedTab = ref<string>(getOptions('selectedTab')?? 'tab-favourites');
 const loading = ref<string>('');
+const updateLoading = (val: string) => { loading.value = val };
 
 // computed states (add the price to favTickersReactive)
 // Watch or trigger this effect when 'favTickersReactive' changes
