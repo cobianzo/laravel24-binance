@@ -17,7 +17,8 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             // We update in Profile page
-            $table->string('binance_token')->nullable();
+            $table->string('binance_public_key')->nullable();
+            $table->string('binance_secret_key')->nullable();
 
             // We manage in Currencies page
             $table->json('fav_tickers')->nullable();
@@ -30,7 +31,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('binance_token');
+            $table->dropColumn('binance_public_key');
+            $table->dropColumn('binance_secret_key');
             $table->dropColumn('fav_tickers');
         });
     }

@@ -20,7 +20,8 @@ class ProfileUpdateRequest extends FormRequest
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($this->user()->id)],
 
             // Rules for my new fields, so they can be validated in 'update' method
-            'binance_token' => ['nullable', 'string'],
+            'binance_public_key' => ['nullable', 'string'],
+            'binance_secret_key' => ['nullable', 'string'],
 
         ];
     }

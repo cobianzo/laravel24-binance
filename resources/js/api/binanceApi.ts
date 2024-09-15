@@ -8,7 +8,13 @@ export const getBinancePrice = async (symbol: string): Promise<TickerPriceType> 
     const response = await axios.get<TickerPriceType>(`/binance/prices/${symbol}`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching Binance price:', error);
+    console.error(`Error fetching Binance price for ${symbol}:`, error);
     throw error;
   }
 };
+
+export const getUserBalances = async () => {
+  const response = await axios.put(`/binance/balances`);
+  return response.data;
+  console.log(response);
+}

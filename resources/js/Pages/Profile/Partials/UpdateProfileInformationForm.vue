@@ -15,7 +15,8 @@ const user = usePage().props.auth.user;
 const form = useForm({
     name: user.name,
     email: user.email,
-    binance_token: user.binance_token || ''
+    binance_public_key: user.binance_public_key || '',
+    binance_secret_key: user.binance_secret_key || ''
 });
 </script>
 
@@ -84,13 +85,23 @@ const form = useForm({
 
             <!-- Nuevo Campo: Binance Token -->
             <div>
-                <InputLabel for="binance_token" value="Binance Token" />
+                <InputLabel for="binance_public_key" value="Binance Public" />
 
                 <TextInput
-                    id="binance_token"
+                    id="binance_public_key"
                     type="text"
                     class="mt-1 block w-full"
-                    v-model="form.binance_token"
+                    v-model="form.binance_public_key"
+                />
+            </div>
+            <div>
+                <InputLabel for="binance_secret_key" value="Binance Secret" />
+
+                <TextInput
+                    id="binance_secret_key"
+                    type="password"
+                    class="mt-1 block w-full"
+                    v-model="form.binance_secret_key"
                 />
             </div>
 

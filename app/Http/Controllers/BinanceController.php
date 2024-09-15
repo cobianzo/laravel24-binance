@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Auth;
+
 
 class BinanceController extends Controller
 {
@@ -49,4 +51,42 @@ class BinanceController extends Controller
         return response()->json(['error' => 'Error fetching data from Binance'], 500);
 
     } // end fn
+
+    /**
+     * Retrieves the user's balances from the Binance API.
+     *
+     * @throws \Illuminate\Http\Client\RequestException if the request to the Binance API fails
+     * @return \Illuminate\Http\JsonResponse a JSON response containing the user's balances
+     */
+    public static function getUserBalances() {
+        $user = Auth::user();
+
+        // Create signature with the secret key, unique for the current time
+        $timestamp   = round(microtime(true) * 1000);
+        $queryString = 'timestamp=' . $timestamp;
+        $signature   = hash_hmac('sha256', $queryString, $user->binance_secret_key);
+        $url = 'https://api.binance.com/api/v3/account'
+            . '?' . $queryString
+            . '&signature=' . $signature;
+
+        $response = Http::withHeaders([
+            'X-MBX-APIKEY'     => $user->binance_public_key
+        ])->get($url);
+        
+        if ($response->successful()) {
+            $balances = $response->json()['balances'];
+            // return  $balances;
+            $result = collect($balances)
+                ->filter(fn ($balance) => $balance['free'] > 0)
+                ->values()
+                ->map(fn ($balance) => [
+                    'symbol' => $balance['asset'],
+                    'amount' => $balance['free'],
+            ])->toArray();
+
+            return response()->json($result);
+        }
+
+        return response()->json(['error' => 'Error fetching data from Binance'], 500);
+    }
 }

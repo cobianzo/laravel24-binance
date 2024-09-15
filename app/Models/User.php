@@ -22,7 +22,8 @@ class User extends Authenticatable
         'password',
 
         // our fields
-        'binance_token',
+        'binance_public_key',
+        'binance_secret_key',
     ];
 
     /**

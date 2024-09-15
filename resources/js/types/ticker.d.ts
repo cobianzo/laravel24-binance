@@ -10,3 +10,8 @@ export interface TickerPriceType {
   symbol: string;
   price: number;
 }
+
+export interface BalanceType {
+  amount: number;
+  symbol: string;
+}

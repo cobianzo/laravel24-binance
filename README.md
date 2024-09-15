@@ -21,6 +21,9 @@
 
 -   ~~Using Guzzle `composer require guzzlehttp/guzzle`~~ . It was a mistake. It's enough with Http class.
 -   Creating controller: `php artisan make:controller BinanceController`
+-   For the internal endpoints, I created `binance-routes.php`. Similar to web.php, to be used in Vue, with:
+    -   internal endpoints, for example, to update the user's favourite tickers dynamically from Vue.
+    -   external endpoints to binance, to retrieve the price of a ticker, or the balance of the user in Binance
 
 ## New field in Profile page for binance_token.
 
@@ -30,7 +33,8 @@
 
 -   showing info via API with `binanceApi.ts` in frontend, connecting to routes in `binance-routes.php` (similar to web.php) which call the logic in the controller `BinanceController`.
 -   Like this we avoid the CORS problem by calling directly from the frontend.
--   Creation of custom component InputLookup.vue for the add to favourites.
+-   Creation of custom component `InputLookup.vue` for the add to favourites.
+-   I created a state to hold the favourite tickers in the page, so we can update it with a js call.and the information in the page updates synamically (we don't need to reload the page)
 
 # Explanation of the project
 

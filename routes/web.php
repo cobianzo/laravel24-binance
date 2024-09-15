@@ -16,6 +16,7 @@ Route::get('/', function () {
 });
 
 Route::get('/currencies', function () {
+    // dd(BinanceController::getUserBalances());
     return Inertia::render('Currencies', [ 
         'favTickers' => array_values(json_decode( auth()->user()->fav_tickers ?? '[]', true )),
         'allTickers' => BinanceController::getAllTickers(),

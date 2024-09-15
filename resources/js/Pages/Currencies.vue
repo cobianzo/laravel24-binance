@@ -16,30 +16,26 @@
                             <AddFavTicker :allTickers="allTickers" :updateFavTickersFrom="updateFavTickersFrom" :test="test" />
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div v-if="!favTickersWithPrice.length" class="p-4 bg-gray-100 rounded-lg shadow-md flex justify-center items-center">
-                                <span class="font-semibold text-xl text-dark">You don't have any favourite tickers selected yet.</span>
+                        <nav class="flex justify-start mb-4" aria-label="Tabs">
+                            <button @click="selectedTab = 'tab-favourites'" 
+                                :class="{ 'bg-gray-100  dark:bg-white-700 text-accent hover:text-accent dark:text-dark': selectedTab === 'tab-favourites' }"
+                                class="py-2 px-4 rounded-lg text-gray-500 hover:text-gray-800">Favourites</button>
+                            <button @click="selectedTab = 'tab-portfolio'" 
+                                :class="{ 'bg-gray-100  dark:bg-white-700 text-accent hover:text-accent dark:text-dark': selectedTab === 'tab-portfolio' }"
+                                class="py-2 px-4 rounded-lg text-gray-500 hover:text-gray-800">Portfolio</button>
+                        </nav>
+                        <!-- Paneles de contenido para desktop -->
+                        <div class="mt-4">
+                            <div v-show="selectedTab === 'tab-favourites'" class="p-4 mb-2 bg-white rounded-lg shadow-md">
+                                <TickersList :tickersWithPrice="favTickersWithPrice" :deleteTicker="deleteTicker" :btnFunction="updateFavTickersFrom" />
                             </div>
-
-                            <div
-                                v-for="currency in favTickersWithPrice"
-                                :key="currency.symbol"
-                                class="p-4 bg-gray-100 rounded-lg shadow-md flex justify-between items-center cursor-pointer hover:bg-red-100"
-                                @click="deleteTicker(currency.symbol)"
-                                
-                            >
-                                <!-- @TODO: Create this as a separated component -->
-                                <span class="font-semibold text-xl text-dark">{{ currency.symbol }}</span>
-                                <span class="text-success font-bold text-xl">{{ currency.price }}</span>
-                            </div>
-
-                            <div class="col-span-2 p-4 flex justify-center items-center">
-                                <button @click="updateFavTickersFrom" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                                    <!-- This can be deleted. It was created for debug purposes -->
-                                    Update fav tickers list
-                                </button>
+                            <div v-show="selectedTab === 'tab-portfolio'" class="p-4 mb-2 bg-white rounded-lg shadow-md text-dark">
+                                Contenido del panel 2
+                                <BalancesList :balances="balances" :selectBalance="selectBalance" />
                             </div>
                         </div>
+                        
+
                     </div>
                 </div>
             </div>
@@ -51,11 +47,13 @@
 
 // Partials
 import AddFavTicker from './Currencies/AddFavTicker.vue';
+import TickersList from './Currencies/TickersList.vue';
+import BalancesList from './Currencies/BalancesList.vue';
 
 // Inertia dependencies
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { TickerType, TickerPriceType } from '@/types/ticker';
+import { TickerType, TickerPriceType, BalanceType } from '@/types/ticker';
 
 // Vue dependencies
 import { onMounted, watchEffect, ref } from 'vue';
@@ -64,7 +62,7 @@ import { onMounted, watchEffect, ref } from 'vue';
 import axios from 'axios';
 
 // Internal dependencies (binanceApi)
-import { getBinancePrice } from '@/api/binanceApi';
+import { getBinancePrice, getUserBalances } from '@/api/binanceApi';
 
 // This comes from the PHP.
 const props = defineProps<{
@@ -75,7 +73,11 @@ const props = defineProps<{
 // reactive states (data)
 const allTickers = ref<TickerType[]>([]);
 const favTickersReactive = ref<string[]>(props.favTickers);
-const favTickersWithPrice = ref<TickerPriceType[]>([]);
+const favTickersWithPrice = ref<TickerPriceType[]|null>(null);
+const balances = ref<BalanceType[]|null>(null);
+
+// for ui:
+const selectedTab = ref<string>('tab-favourites');
 
 // computed states (add the price to favTickersReactive)
 // Watch or trigger this effect when 'favTickersReactive' changes
@@ -100,39 +102,45 @@ watchEffect(async () => {
 // functions 
 function updateFavTickersFrom() {
     axios.put<string[]>(`/user/fav-tickers`).then(response => {
-        console.log('Retrieve fav tickers from backend', response);
+        console.log('TODELETE: Retrieve fav tickers from backend', response);
         favTickersReactive.value = response.data;
     } );;
+    selectedTab.value = 'tab-favourites';
 }
 
 function deleteTicker(tickerSymbol: string): void {
     console.log('CALLED deleteTuicker', tickerSymbol);
     axios.delete<string[]>(`/user/fav-tickers/${tickerSymbol}`).then(response => {
-        console.log(`Deleted ${tickerSymbol} fav ticker from backend`, response);
+        console.log(`TODELETE: Deleted ${tickerSymbol} fav ticker from backend`, response);
         updateFavTickersFrom();
     } );;
 }
 
+function selectBalance(balance: BalanceType) : void {
+    console.log('TODELET> selected: ', balance);
+}
 
 onMounted(async () => {
+
+    getUserBalances().then((response: BalanceType[]) => {
+        console.log('TODELETE: Retrieve balances from backend', response);
+        balances.value = response;
+    });
 
     // initialize the fav currencies from bakckend
     favTickersReactive.value = props.favTickers;
 
+    // and initialize all tickets for the lookup @TODO: they could be initialized on focus
     try {
         const allTickersResponse = await axios.get<TickerType[]>(`/binance/alltickers`);
         allTickers.value = allTickersResponse.data;
     } catch (error) {
-        console.error('Error fetching Binance price:', error);
         throw error;
-    }
-    
-    console.log('all tickers: ', allTickers.value );
+    }    
     
 }); // end Mount
 </script>
 
 <style scoped>
-
 </style>
 
