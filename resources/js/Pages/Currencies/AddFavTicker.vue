@@ -30,6 +30,7 @@ const items = computed(() => {
   return props.allTickers === null ? [] : props.allTickers.map(t => ({ label: t.symbol, value: t.symbol }));
 });
 
+// @TODO: to make this component universal, we should move this function outside the component and pass as prop.
 function addFavWhenItemSelected(item: LookupItemType): void {
   const ticker: string = String(item.value);
   

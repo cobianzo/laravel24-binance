@@ -33,8 +33,19 @@
 
 -   showing info via API with `binanceApi.ts` in frontend, connecting to routes in `binance-routes.php` (similar to web.php) which call the logic in the controller `BinanceController`.
 -   Like this we avoid the CORS problem by calling directly from the frontend.
+
+### Section to add favourite ticker
+
 -   Creation of custom component `InputLookup.vue` for the add to favourites.
 -   I created a state to hold the favourite tickers in the page, so we can update it with a js call.and the information in the page updates synamically (we don't need to reload the page)
+
+### Tabs to show 1) list of favourite tickers and 2) user's currency and balances in Binance
+
+-   Adding the state var selectedTab, and created a micro CRUD library to save options in localStorage.
+
+### Add drag and drop to the favourite
+
+-   Installing npm install **vuedraggable**
 
 # Explanation of the project
 

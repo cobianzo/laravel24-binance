@@ -1,11 +1,12 @@
 <script setup lang="ts">
   import { BalanceType } from '@/types/ticker';
-  import { watch, ref } from 'vue';
+  import { watch, ref, Ref } from 'vue';
   import { getBinancePrice } from '@/api/binanceApi';
   import { formatNumber } from '@/utils/helpers';
   
   // propd coming from the parent
   const props = defineProps<{
+    loading?: Ref<string>,
     balances: BalanceType[] | null,
     selectBalance: (arg0: BalanceType) => void
   }>();
@@ -32,14 +33,18 @@
     if (newBalances === null) {
         balancesWithPrice.value = {};
       } else {
-        // let newBalancesWithPrice: { [ticker: string]: number } = {};
+        alert('TODELETE reaclculo de todos los symbols ');
         
+        // if (props.loading) props.loading.value = 'page';
+
         const setOfPromises = newBalances.map(async (balance) => {
           updateBalanceWithPrice(balance.symbol, balance.amount);
         });
         
         await Promise.all(setOfPromises);
         console.log('Finished CALCULATED all balances in USDT: ', balancesWithPrice.value );
+        // if (props.loading) props.loading.value = '';
+        
         // @TODO: Now we could sort the currencies in order of balance in USDT.
         
       }

@@ -68,28 +68,47 @@ class ProfileController extends Controller
      * body: {
      *  ticker: 'BTCUSDT'
      * }
+     * or replace the whole list.
+     * body: {
+     *  list: 'BTCUSDT,ETCUSDT,DOGEBTC'
+     * }
      *
      * @param Request $request The incoming HTTP request containing the ticker to add.
      * @return \Illuminate\Http\JsonResponse A JSON response containing the updated list of favorite tickers.
      */
     public function addFavTicker(Request $request)
     {
-        $user   = auth()->user(); // Obtener el usuario autenticado
-        $ticker = $request->input('ticker');
-
-        // Verificar si el usuario ya tiene tickers favoritos
+        $user       = auth()->user(); // Obtener el usuario autenticado
         $favTickers = json_decode( $user->fav_tickers ?? '[]', true );
 
-        // Evitar duplicados
-        if (!in_array($ticker, $favTickers)) {
-            $favTickers[] = $ticker; // Añadir el nuevo ticker
+        $ticker = $request->input('ticker');
+        $list   = $request->input('list');
+        
+        $updated = false;
+        if ( !empty($ticker) ) {
+            // Evitar duplicados
+            if (!in_array($ticker, $favTickers)) {
+                $favTickers[] = $ticker; // Añadir el nuevo ticker
+            }
+            $updated = true;
+        }
+        elseif ( $list === '' || !empty($list) ) {
+            $favTickers = explode(',', $list);
+            if ( !empty($list) && !count($favTickers) ) {
+                // error
+                return response()->json(['error' => 'Invalid list'], 400);
+            }  
+            $updated = true;         
         }
 
-        // Guardar los tickers favoritos actualizados en la base de datos
-        $user->fav_tickers = array_filter( $favTickers, fn($item) => ! empty($item) );
-        $user->save();
+        if ($updated) {
+            // Guardar los tickers favoritos actualizados en la base de datos
+            $user->fav_tickers = array_filter( $favTickers, fn($item) => ! empty($item) );
+            $user->save();
+            return response()->json(['success' => true, 'fav_tickers' => $favTickers]);
+        }
 
-        return response()->json(['success' => true, 'fav_tickers' => $favTickers]);
+        return response()->json(['error' => 'Not udpdated for some reason'], 400);
     }
 
     /**
