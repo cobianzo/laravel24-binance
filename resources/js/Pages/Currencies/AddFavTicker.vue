@@ -22,12 +22,17 @@ import Lookupinput, {LookupItemType} from '@/Components/LookupInput.vue';
 // props sent by parent.
 const props = defineProps<{
   allTickers: TickerType[] | null,
+  exclude?: string[],
   updateFavTickersFrom: () => void
   test: string
 }>();
 
 const items = computed(() => {
-  return props.allTickers === null ? [] : props.allTickers.map(t => ({ label: t.symbol, value: t.symbol }));
+  let mappedTickers = props.allTickers === null ? [] : props.allTickers.map(t => ({ label: t.symbol, value: t.symbol }));
+  if (props.exclude !== undefined && props.exclude.length) {
+    mappedTickers = mappedTickers.filter( (t) => ! props.exclude?.includes(t.value) )
+  }
+  return mappedTickers;
 });
 
 // @TODO: to make this component universal, we should move this function outside the component and pass as prop.

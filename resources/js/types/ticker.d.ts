@@ -9,6 +9,7 @@ export interface TickerType {
 export interface TickerPriceType {
   symbol: string;
   price: number;
+  isDeleting?: boolean; // Prescindible: just to add an animation when we delete it.
 }
 
 export interface BalanceType {

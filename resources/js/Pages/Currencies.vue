@@ -37,7 +37,11 @@
                         <div class="mt-4">
                             <div v-show="selectedTab === 'tab-favourites'" class="p-4 mb-2 bg-white rounded-lg shadow-md">
                                 <div class="p-4 bg-gray-100 text-dark font-bold rounded-lg shadow-md flex-col justify-between items-center mb-4">
-                                    <AddFavTicker :allTickers="allTickers" :updateFavTickersFrom="updateFavTickersFrom" :test="test" />
+                                    <AddFavTicker 
+                                        :allTickers="allTickers" 
+                                        :updateFavTickersFrom="updateFavTickersFrom" 
+                                        :exclude="favTickersReactive"
+                                        :test="test" />
                                 </div>
                                 <TickersList 
                                     :tickersWithPrice="favTickersWithPrice"
@@ -91,7 +95,7 @@ import Spinner from '@/Components/Spinner.vue';
 import TradingPanel from './Currencies/TradingPanel.vue';
 
 
-// This comes from the PHP.
+// This comes from the PHP. It's updated over favTickersReactive with axios calls too as we operate with them.
 const props = defineProps<{
     favTickers: string[],
     test: string
@@ -106,7 +110,7 @@ const favTickersWithPrice = ref<TickerPriceType[]|null>(null);
 // => Balances (portfolio tab)
 const balances = ref<BalanceType[]|null>(null);
 // => Trading panel
-const selectedTicker = ref<string>('');
+const selectedTicker = ref<string>(getOptions('selectedTicker')?? '');
 
 // for ui:
 const selectedTab = ref<string>(getOptions('selectedTab')?? 'tab-favourites');
@@ -185,11 +189,21 @@ function saveSortedTickers(event: CustomEvent) {
 }
 
 function deleteFavTicker(tickerSymbol: string): void {
-    console.log('CALLED deleteTuicker', tickerSymbol);
+    console.log('CALLED deleteTuicker to PHP (@todelete)', tickerSymbol);
+    
+    // UI: this will add a transition of opacity for the second that it takes to remove the card.
+    const index: number|undefined = favTickersWithPrice.value?.findIndex(t => t.symbol === tickerSymbol);
+    if (index !== undefined && index !== -1) favTickersWithPrice.value![index].isDeleting = true;
+
     axios.delete<string[]>(`/user/fav-tickers/${tickerSymbol}`).then(response => {
         console.log(`TODELETE: Deleted ${tickerSymbol} fav ticker from backend`, response);
+        if (selectedTicker.value === tickerSymbol) selectedTicker.value = '';
         updateFavTickersFrom();
-    } );
+    } ).catch((error) => {
+        console.error(`TODELETE: Error  Deleteing ${tickerSymbol} fav ticker from backend`, error);
+        if (index !== undefined && index !== -1) favTickersWithPrice.value![index].isDeleting = false;
+    });
+    
 }
 
 // => Balances Tab (portfolio)
@@ -218,6 +232,7 @@ function activateBalancesTab() {
 // => Trading Panel 
 function handleSelectCurrentTicker( symbol: string ) : void {
     selectedTicker.value = symbol;
+    saveOptions({ selectedTicker: symbol });
 }
 
 

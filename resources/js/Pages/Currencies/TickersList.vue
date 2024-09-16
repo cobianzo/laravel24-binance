@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { TickerPriceType } from '@/types/ticker';
   import draggable from 'vuedraggable';
+  import TickerCard from './TickerCard.vue';
   
   // propd coming from the parent
   const props = defineProps<{
@@ -33,16 +34,10 @@
       >
       <template #item="{ element }">
         
-        <div
-        :key="element.symbol"
-        :data-symbol="element.symbol"
-        @click="$emit('selectCurrentTicker', element.symbol)"
-        class="p-4 bg-gray-100 rounded-lg shadow-md flex justify-between items-center cursor-pointer border  hover:border-accent"
-        :class="{ 
-          'border-accent': props.selectedTicker === element.symbol, 
-          'border-gray-100': props.selectedTicker !== element.symbol }"
+        <TickerCard :ticker="element" :key="element.symbol" 
+          @click="$emit('selectCurrentTicker', element.symbol)"
+          :isSelected="props.selectedTicker === element.symbol"
         >
-          <span class="ticker-text font-semibold text-xl text-dark">{{ element.symbol }}</span>
           <span class="text-success font-bold text-xl">{{ element.price }}</span>
           <button
             @click="deleteTicker(element.symbol);"
@@ -50,7 +45,7 @@
             >
             Remove
           </button>
-        </div>
+        </TickerCard>
       
       </template>
     </draggable>

@@ -8,6 +8,7 @@
 
 type UserOptions = {
   selectedTab?: string;
+  selectedTicker?: string;
   // Aquí puedes añadir más opciones según sea necesario
 };
 
