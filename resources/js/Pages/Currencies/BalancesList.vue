@@ -33,19 +33,17 @@
     if (newBalances === null) {
         balancesWithPrice.value = {};
       } else {
-        // alert('TODELETE reaclculo de todos los symbols ');
-        
-        if (props.updateLoading) props.updateLoading('page');
+        // these calculations take a long time, so we show a loading UI
+        if (props.updateLoading) props.updateLoading('portfolio-loading');
 
         const setOfPromises = newBalances.map(async (balance) => {
           return updateBalanceWithPrice(balance.symbol, balance.amount);
         });
         
         Promise.all(setOfPromises).finally( () => {
-          alert('acabo');
           if (props.updateLoading) props.updateLoading('');
         });
-        // if (props.loading) props.loading.value = '';
+        
         
         // @TODO: Now we could sort the currencies in order of balance in USDT.
         
@@ -80,7 +78,6 @@
   function myDebugBtnClick() {
     if (props.updateLoading) {
       console.log('clicked!!');  
-      props.updateLoading('page');
       updateBalancesWithPrice(props.balances);
     }
   }

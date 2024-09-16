@@ -7,11 +7,14 @@
     tickersWithPrice: TickerPriceType[] | null,
     deleteTicker: (arg0: string) => void,
     containerId?: string | null | undefined,
-    btnFunction: () => void,
+    selectedTicker: string,
     dragEndFunction: (arg0: CustomEvent) => void
+    btnFunction: () => void, // button on the bottom just for debugging purposes
   }>();
 
-  // method after drag
+  // methods
+  const emit = defineEmits(['selectCurrentTicker'])  // Define the emitted events
+
 </script>
 <template>
   <div :id="props.containerId || 'ticker-container'" class="ticker-container">
@@ -33,13 +36,17 @@
         <div
         :key="element.symbol"
         :data-symbol="element.symbol"
-        class="p-4 bg-gray-100 rounded-lg shadow-md flex justify-between items-center cursor-pointer border border-gray-100 hover:border-accent"
+        @click="$emit('selectCurrentTicker', element.symbol)"
+        class="p-4 bg-gray-100 rounded-lg shadow-md flex justify-between items-center cursor-pointer border  hover:border-accent"
+        :class="{ 
+          'border-accent': props.selectedTicker === element.symbol, 
+          'border-gray-100': props.selectedTicker !== element.symbol }"
         >
           <span class="ticker-text font-semibold text-xl text-dark">{{ element.symbol }}</span>
           <span class="text-success font-bold text-xl">{{ element.price }}</span>
           <button
             @click="deleteTicker(element.symbol);"
-            class="inline-flex items-center px-4 py-2 bg-red-500 border rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition ease-in-out duration-150" 
+            class="inline-flex items-center px-4 py-2 bg-red-500 border rounded-md font-semibold text-xs text-white dark:text-gray-300 uppercase tracking-widest shadow-sm hover:bg-gray-500 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition ease-in-out duration-150" 
             >
             Remove
           </button>

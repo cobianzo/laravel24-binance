@@ -11,7 +11,19 @@
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
                     <div class="p-6 text-gray-900 dark:text-gray-100">
-                        <h1 class="text-3xl font-bold mb-4">Currencies</h1>
+                        <div class="flex flex-row w-full gap-4">
+                            <div class="flex-shrink flex items-center ">
+                                <h1 class="text-3xl font-bold mb-0">Currencies</h1>
+                            </div>
+                            <div class="flex-grow items-center justify-center border-accent border-left-16 flex">
+                                <TradingPanel :selectedTicker="selectedTicker" 
+                                              @selectCurrentTicker="handleSelectCurrentTicker"
+                                />
+                            </div>
+                        </div> 
+                        
+
+                        <Spinner v-if="loading === 'portfolio-loading'" :extraClass="'absolute left-1/2'" />
 
                         <nav class="flex justify-start mb-4" aria-label="Tabs">
                             <button @click="selectedTab = 'tab-favourites'; saveOptions({ selectedTab: 'tab-favourites' });" 
@@ -29,13 +41,19 @@
                                 </div>
                                 <TickersList 
                                     :tickersWithPrice="favTickersWithPrice"
-                                    :deleteTicker="deleteTicker" 
+                                    :deleteTicker="deleteFavTicker" 
+                                    :selectedTicker="selectedTicker"
                                     :dragEndFunction="saveSortedTickers"
                                     :containerId="favourite-tickers"
-                                    :btnFunction="updateFavTickersFrom" />
+                                    @selectCurrentTicker="handleSelectCurrentTicker"
+                                    :btnFunction="updateFavTickersFrom"
+                                    />
                             </div>
-                            <div v-show="selectedTab === 'tab-portfolio'" class="p-4 mb-2 bg-white rounded-lg shadow-md text-dark">
-                                Contenido del panel 2
+                            <div v-show="selectedTab === 'tab-portfolio'" 
+                                class="p-4 mb-2 bg-white rounded-lg shadow-md text-dark"
+                                :class="{ 'opacity-25': loading === 'portfolio-loading' }"
+                                >
+                                
                                 <BalancesList :balances="balances" :selectBalance="selectBalance" :updateLoading="updateLoading" />
                             </div>
                         </div>
@@ -56,7 +74,7 @@ import TickersList from './Currencies/TickersList.vue';
 import BalancesList from './Currencies/BalancesList.vue';
 
 // Inertia dependencies
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { TickerType, TickerPriceType, BalanceType } from '@/types/ticker';
 
@@ -69,6 +87,8 @@ import axios from 'axios';
 // Internal dependencies (binanceApi and Localstorage options for the selected tab)
 import { getBinancePrice, getUserBalances } from '@/api/binanceApi';
 import { getOptions, saveOptions } from '@/utils/localStorage-CRUD';
+import Spinner from '@/Components/Spinner.vue';
+import TradingPanel from './Currencies/TradingPanel.vue';
 
 
 // This comes from the PHP.
@@ -78,10 +98,15 @@ const props = defineProps<{
 }>();
 
 // reactive states (data)
+// ======================
+// => Fav tickers tab
 const allTickers = ref<TickerType[]>([]);
 const favTickersReactive = ref<string[]>(props.favTickers);
 const favTickersWithPrice = ref<TickerPriceType[]|null>(null);
+// => Balances (portfolio tab)
 const balances = ref<BalanceType[]|null>(null);
+// => Trading panel
+const selectedTicker = ref<string>('');
 
 // for ui:
 const selectedTab = ref<string>(getOptions('selectedTab')?? 'tab-favourites');
@@ -108,7 +133,10 @@ watchEffect(async () => {
   favTickersWithPrice.value = results;
 });
 
-// functions 
+// functions and methods
+// =====================
+
+// => Favourites Tab
 function updateFavTickersFrom() {
     // get the list
     axios.put<string[]>(`/user/fav-tickers`).then(response => {
@@ -156,7 +184,7 @@ function saveSortedTickers(event: CustomEvent) {
     
 }
 
-function deleteTicker(tickerSymbol: string): void {
+function deleteFavTicker(tickerSymbol: string): void {
     console.log('CALLED deleteTuicker', tickerSymbol);
     axios.delete<string[]>(`/user/fav-tickers/${tickerSymbol}`).then(response => {
         console.log(`TODELETE: Deleted ${tickerSymbol} fav ticker from backend`, response);
@@ -164,6 +192,7 @@ function deleteTicker(tickerSymbol: string): void {
     } );
 }
 
+// => Balances Tab (portfolio)
 function selectBalance(balance: BalanceType) : void {
     console.log('TODELET> selected: ', balance);
 }
@@ -186,6 +215,14 @@ function activateBalancesTab() {
     }
 }
 
+// => Trading Panel 
+function handleSelectCurrentTicker( symbol: string ) : void {
+    selectedTicker.value = symbol;
+}
+
+
+// Lifecycle hooks
+// ================
 onMounted(async () => {
 
     // initialize the fav currencies from bakckend
