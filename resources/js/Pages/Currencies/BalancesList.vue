@@ -9,9 +9,10 @@
     updateLoading?: (arg0: string) => void,
     balances: BalanceType[] | null,
     selectBalance: (arg0: BalanceType) => void
+    updateBalanceSelectedTicker: (arg0: BalanceType) => void
   }>();
 
-  // state. For every currency in the portfolio, we ask to biance the price in USDT
+  // state. For every currency in the portfolio, we ask to binance the price in USDT
   const balancesWithPrice = ref<{ [symbol: string] : { price: number | null, balanceValue: number } }>({});
 
   /**

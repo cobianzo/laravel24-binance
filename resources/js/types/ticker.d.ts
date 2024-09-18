@@ -4,6 +4,7 @@ export interface TickerType {
   precisionBase: number;
   asset: string;
   precisionAsset: number;
+  balance?: number; 
 }
 
 export interface TickerPriceType {

@@ -45,7 +45,15 @@
 
 ### Add drag and drop to the favourite
 
--   Installing npm install **vuedraggable**
+-   Installing npm install **vuedraggable**.
+
+### Panel showing the selected ticker, the one we will trade with
+
+-   Added some other UI and UX improvements. When selecting a current ticker, it's saved in localStorage. Reloading the page initializes to that ticker. Deleting a fav ticker adds a prop `isDeleting` to that ticker, showing it semitransparent, for better look before it dissappears.
+
+## Adding websockets to show always current price of selectedTicker.
+
+-   Dismissed. It's too much for this project using a third party helper like pusher or creating our own websockets server. We simply use a setInterval to reload the price every 5 secs.
 
 # Explanation of the project
 
@@ -54,11 +62,11 @@
 Crear un proyecto en Laravel que me permita loguearme y gestionar mi perfil de usuario. Para ello, usaremos Laravel 11, usando el installer de Laravel, que ayuda a configurar un Boilerplate llamado `Breeze`, ya con autentificación, con VueJS e Inertia, que ayuda a comunicar Backend data y Frontend sin necesidad de hacer llamadas a la API.  
 Queremos que el usuario pueda introducir en su página de perfil el token de autentificación de su cuenta de Binance, para poder acceder a tu cartera y realizar operaciones en su nombre desde nuestra app.
 Queremos crear la página privada /currencies, que muestran la lista del protafolio de usuario, muestra también una lista de los tickers favoritos del usuario, con un input lookup que permite buscar los tickers y añadirlo a la lista de favoritos.
-En esa página, Hay una sección llamada Trade que muestra el precio en tiempo real del ticker que has seleccionado.
+En esa página, Hay una sección llamada Trade que muestra el precio en tiempo real del ticker que has seleccionado (`selectedTicker`).
 
 ## Backend:
 
--   API Service: Crear un servicio dedicado para manejar las peticiones hacia la API de Binance. Este servicio se encargará de las credenciales y la autenticación:
+-   API Service: Crear un servicio dedicado para manejar las peticiones hacia la API de Binance. Este servicio se encargará de las credenciales y la autenticación (realmente no cree un servicio, sencillamente un controlador `BinanceController.php` donde meti toda la logica de backend relacionada con Binance.):
     ``
 -   Rutas: Definir rutas que se conecten con el frontend para obtener y mostrar los precios de las monedas, así como permitir futuras operaciones (compra/venta): `/currencies` in `routes/web.php`
 -   Controladores: Controladores para interactuar con el servicio de la API y devolver los datos procesados al frontend. `php artisan make:controller BinanceController >> BinanceController.php`, routes in `routes/binance-routes.php`

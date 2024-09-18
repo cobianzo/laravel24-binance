@@ -15,6 +15,6 @@ export const getBinancePrice = async (symbol: string): Promise<TickerPriceType> 
 
 export const getUserBalances = async () => {
   const response = await axios.put(`/binance/balances`);
+  console.log('TODELET:all info for account user: ', response);
   return response.data;
-  console.log(response);
 }

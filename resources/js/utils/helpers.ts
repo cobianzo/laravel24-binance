@@ -1,3 +1,5 @@
+import { TickerType } from '@/types/ticker';
+
 /**
    * Converts 23.3400000 into '23.34'
    *
@@ -9,4 +11,11 @@ export function formatNumber(value: number | string | null, maxDecimals: number 
   const formatted = typeof value === 'string' ? parseFloat(value) : value;
   const formattedString = maxDecimals && typeof formatted === 'number'? formatted.toFixed(maxDecimals) : formatted.toString();
   return parseFloat(formattedString).toString();
+}
+
+export function getAssetCurrencyFromTicker( symbol: string, allTickers : TickerType[] | null ): TickerType | null {
+  const tickerInfo = allTickers !== null ? 
+        allTickers.find( ticker => ticker.symbol === symbol ) 
+        : null;;
+  return tickerInfo ?? null;
 }

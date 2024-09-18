@@ -9,6 +9,7 @@
 type UserOptions = {
   selectedTab?: string;
   selectedTicker?: string;
+  tradePercentages?: { gain: number, loss: number };
   // Aquí puedes añadir más opciones según sea necesario
 };
 

@@ -12,18 +12,19 @@
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
                     <div class="p-6 text-gray-900 dark:text-gray-100">
                         <div class="flex flex-row w-full gap-4">
-                            <div class="flex-shrink flex items-center ">
-                                <h1 class="text-3xl font-bold mb-0">Currencies</h1>
-                            </div>
                             <div class="flex-grow items-center justify-center border-accent border-left-16 flex">
                                 <TradingPanel :selectedTicker="selectedTicker" 
                                               @selectCurrentTicker="handleSelectCurrentTicker"
+                                              :allTickers="allTickers"
+                                              :balances="balances"
+                                              :updateAllBalances="updateAllBalances"
                                 />
                             </div>
                         </div> 
                         
 
                         <Spinner v-if="loading === 'portfolio-loading'" :extraClass="'absolute left-1/2'" />
+                        <p>{{ `DEBUG TODELETE ${loading}`  }}</p>
 
                         <nav class="flex justify-start mb-4" aria-label="Tabs">
                             <button @click="selectedTab = 'tab-favourites'; saveOptions({ selectedTab: 'tab-favourites' });" 
@@ -215,15 +216,14 @@ function activateBalancesTab() {
     selectedTab.value = 'tab-portfolio';
     saveOptions({ selectedTab: 'tab-portfolio' });
 
+    updateAllBalances();
+}
+
+const updateAllBalances = async () => {
     if (balances.value === null) {
         getUserBalances().then((response: BalanceType[]) => {
             console.log('TODELETE: Retrieve balances from backend', response);
             balances.value = response;
-            nextTick(() => {
-                console.log('DOM has been updated', balances.value);
-                // You can now safely manipulate the DOM or perform actions
-                setTimeout(()=> {console.log(`%c>>> delayed todelet`, 'background:red, color:white', balances.value)}, 1000);
-            });
         }).finally(() => {
         });
     }
@@ -244,8 +244,10 @@ onMounted(async () => {
     favTickersReactive.value = props.favTickers;
 
     // and initialize all tickets for the lookup @TODO: they could be initialized on focus
+    // we can also send them from PHP directly to this page.
     try {
         const allTickersResponse = await axios.get<TickerType[]>(`/binance/alltickers`);
+        console.log('All tickers loaded on Mount instead of from PHP, ', allTickersResponse.data);
         allTickers.value = allTickersResponse.data;
     } catch (error) {
         throw error;
