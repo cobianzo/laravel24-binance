@@ -26,17 +26,20 @@
   const price = ref<number>(0);
   const loadingPrice = ref<number>(0);
   const intervalId = ref<number>(0);
-  const intervalIncrement = ref<number>(0);
-  const speedInterval = ref<number>(5); // 0: stop, 1, slow(every 10 secs), 5: medium, 10: fast ( every 1 sec )
-  const timeInterval  = computed<number>(() => speedInterval? (10000 - ((speedInterval.value / 10) * (10000 - 1000))) : 1000000 );
+  const intervalIncrement = ref<number>(0); // just a counter
+  const intervalCountdown = ref<number>(0);
+  const speedInterval = ref<number>(1); // 0: stop, 1, slow(every 30 secs), 5: medium, 10: fast ( every 1 sec )
+  const timeInterval  = computed<number>(() => speedInterval? (30000 - ((speedInterval.value / 10) * (30000 - 1000))) : 9999999 );
 
   // balance
   const selectedTickerInfo = ref<TickerType | null>();
 
   // Trade options
-  const percentages = reactive<{ gain: number,  loss: number }>({
+  const percentages = reactive<{ gain: number, gainPrice: number, loss: number, lossPrice: number }>({
     gain: getOptions( 'tradePercentages' )?.gain?? 0, // % of gain
-    loss: getOptions( 'tradePercentages' )?.loss?? 0
+    gainPrice: 0,
+    loss: getOptions( 'tradePercentages' )?.loss?? 0,
+    lossPrice: 0
   });
   const theTrade = reactive<{ amount: number }>({
     amount: 0
@@ -46,11 +49,15 @@
   // ============
 
   // setInterval to retrieve the up to date price of the selectedTicker every x seconds.
+  let intCountDwn = 0;
   const updateBinancePrice = async function() {
     if (! props.selectedTicker) {
       price.value = 0;
       return;
     }
+    intervalCountdown.value = timeInterval.value;
+    clearInterval(intCountDwn);
+    intCountDwn = setInterval( () => { intervalCountdown.value -= 1000 } , 1000)
     loadingPrice.value = intervalIncrement.value;
     getBinancePrice(props.selectedTicker).then((tickerAndPrice: TickerPriceType) => {
       if (loadingPrice.value === intervalIncrement.value) {
@@ -107,6 +114,15 @@
     clearInterval(intervalId.value);
   });
 
+  // Watch for changes in percentages.gain or percentages.loss
+  watch(
+    () => [percentages.gain, percentages.loss, price.value],
+    ([newGain, newLoss, newPrice]) => {
+      percentages.gainPrice = newPrice * (1 + newGain / 100); // Calculate gainPrice
+      percentages.lossPrice = newPrice * (1 - newLoss / 100); // Calculate lossPrice
+    }
+  );
+
   // watch every change in  props.selectedTicker
   watch(
     () => props.selectedTicker,
@@ -145,41 +161,59 @@
         <h3 class="text-2xl">{{props.selectedTicker}}</h3>
         <p class="text-3xl text-accent transition-opacity"
           :class="{ 'opacity-20': loadingPrice }"
-          @click="" >{{
+          @click="price = 100"
+          @dblclick="updateBinancePrice()"
+          >{{
             formatNumber(price)
         }}</p>
 
         <p>{{selectedTickerInfo?.base + '/' + selectedTickerInfo?.asset}}</p>
-        <p>balance for {{selectedTickerInfo?.asset}}:<br/> {{ selectedTickerInfo?.balance }}</p>
+        <p @click="theTrade.amount = selectedTickerInfo?.balance ?? 0 ">
+          balance for {{selectedTickerInfo?.asset}}:<br/> {{ selectedTickerInfo?.balance }}
+        </p>
         <p>speed: {{ `${speedInterval} (${timeInterval}seg)` }}</p>
+        <p>refresh in: {{ `${formatNumber(intervalCountdown/1000, 0)} seg` }}</p>
 
       </div>
       <div class="the-trade-percentages flex flex-col items-start">
         <div class="space-y-4">
           <div>
             <label for="gain" class="block text-sm font-medium text-gray-700">Porcentaje de Ganancia</label>
-            <input 
-              id="gain" 
-              type="number" 
-              step="0.05" 
-              v-model="percentages.gain"
-              @change="saveOptions({ tradePercentages: percentages })" 
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              placeholder="Introduce el % de ganancia"
-            />
+            <div class="flex">
+              <input 
+                id="gain" 
+                type="number" 
+                step="0.05" 
+                v-model="percentages.gain"
+                @change="saveOptions({ tradePercentages: percentages })" 
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                placeholder="Introduce el % de ganancia"
+              />
+              <div class="flex flex-col items-end justify-center pl-2 text-gray-600 text-sm text-right">
+                <span>{{ formatNumber(percentages.gainPrice,2) }}</span>
+                <span  class="text-xs text-accent">+{{ formatNumber(theTrade.amount * (percentages.gain / 100), 2) }}</span>
+              </div>
+
+            </div>
           </div>
 
           <div>
             <label for="loss" class="block text-sm font-medium text-gray-700">Porcentaje de Pérdida</label>
-            <input 
-              id="loss" 
-              type="number" 
-              step="0.05" 
-              v-model="percentages.loss" 
-              @change="saveOptions({ tradePercentages: percentages })" 
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              placeholder="Introduce el % de pérdida"
-            />
+              <div class="flex">
+                <input 
+                  id="loss" 
+                  type="number" 
+                  step="0.05" 
+                  v-model="percentages.loss" 
+                  @change="saveOptions({ tradePercentages: percentages })" 
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  placeholder="Introduce el % de pérdida"
+                />
+                <div class="flex flex-col items-end justify-center pl-2 text-gray-600 text-sm ">
+                    <span>{{ formatNumber(percentages.lossPrice,2) }}</span>
+                    <span  class="text-xs text-red-600">-{{ formatNumber((theTrade.amount * (percentages.loss / 100)), 2) }}</span>
+                </div>
+              </div>
           </div>
 
           <div class="mt-4">
@@ -193,14 +227,19 @@
 
       <div class="the-trade-values flex flex-col items-start">
         <label for="trade-amount" class="block text-sm font-medium text-gray-700">Amount of {{ selectedTickerInfo?.asset }} to trade</label>
-        <input 
+        <div class="flex">
+          <input 
               id="trade-amount" 
               type="number" 
               step="1" 
               v-model="theTrade.amount" 
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              class="mt-1 block w-full border-t border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm rounded-md rounded-tr-none rounded-br-none"
               :placeholder="selectedTickerInfo?.asset?? 'set the amount'"
             />
+            <spa  n class="mt-1 inline-flex items-center px-3 text-sm text-gray-900 bg-gray-200 border border-gray-300 dark:bg-gray-600 dark:text-gray-400 dark:border-gray-600 rounded-md rounded-tl-none rounded-bl-none">
+              {{selectedTickerInfo?.asset?? ''}}
+            </spa>
+        </div>
 
       </div>
     </div>
