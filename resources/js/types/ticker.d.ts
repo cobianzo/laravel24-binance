@@ -4,7 +4,7 @@ export interface TickerType {
   precisionBase: number;
   asset: string;
   precisionAsset: number;
-  balance?: number; 
+  balanceAsset?: number; 
 }
 
 export interface TickerPriceType {
@@ -16,4 +16,13 @@ export interface TickerPriceType {
 export interface BalanceType {
   amount: number;
   symbol: string;
+}
+
+export interface TradeOrderType {
+  symbol: string;
+  amount: number;
+  quantity: number; // quantity depends on amount
+  price: number;
+  side: 'BUY' | 'SELL';
+  type: 'LIMIT' | 'MARKET';
 }

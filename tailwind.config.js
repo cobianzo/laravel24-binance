@@ -17,10 +17,10 @@ export default {
             },
             colors: {
                 primary: "#CCC",
-                secondary: "#F59E0B",
-                accent: "#F59E0B",
-                danger: "#F59E0B",
-                success: "#F59E0B",
+                accent: "#F59E0B", // El color de acento original
+                secondary: "#065ee2", // Un poco más oscuro que el acento para contraste
+                danger: "#D97706", // Un tono más profundo y cálido para las advertencias
+                success: "#FFD166",
                 dark: "#000000",
                 light: "#F8F9FA",
             },

@@ -16,7 +16,7 @@
   const balancesWithPrice = ref<{ [symbol: string] : { price: number | null, balanceValue: number } }>({});
 
   /**
-   * Update UI for one currenct card
+   * Update UI for one current ticker Card
    */
   const updateBalanceWithPrice = async ( symbol: string, amount: number) => {
     const price = await getUSDPriceForSymbol(symbol);
@@ -54,8 +54,7 @@
     () => props.balances,
     async (newBalances) => {
       updateBalancesWithPrice(newBalances);
-    },
-    { immediate: true }
+    }
   );
 
   // methods

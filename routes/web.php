@@ -17,10 +17,13 @@ Route::get('/', function () {
 
 Route::get('/currencies', function () {
     // dd(BinanceController::getUserBalances());
+    // dd(BinanceController::getUserOrders());
+    
     return Inertia::render('Currencies', [ 
-        'favTickers' => array_values(json_decode( auth()->user()->fav_tickers ?? '[]', true )),
-        // 'allTickers' => BinanceController::getAllTickers(), We don't want to lose time in the server side.
-        'test' => BinanceController::test(),
+        'favTickers'       => array_values(json_decode( auth()->user()->fav_tickers ?? '[]', true )),
+        // 'allTickers'    => BinanceController::getAllTickers(), We don't want to lose time in the server side.
+        'binancePublicKey' => auth()->user()->binance_public_key,
+        'userOrders'       => [], // BinanceController::getUserOrders(),
     ] );
 })->middleware(['auth', 'verified'])->name('currencies');
 

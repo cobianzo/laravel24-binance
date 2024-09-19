@@ -53,7 +53,7 @@
 
 ## Adding websockets to show always current price of selectedTicker.
 
--   Dismissed. It's too much for this project using a third party helper like pusher or creating our own websockets server. We simply use a setInterval to reload the price every 5 secs.
+-   Doing it in Laravel, with PHP was too complex. But with js is super simple. See `openWebSocket` function.
 
 # Explanation of the project
 

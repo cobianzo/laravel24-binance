@@ -18,6 +18,8 @@
                                               :allTickers="allTickers"
                                               :balances="balances"
                                               :updateAllBalances="updateAllBalances"
+                                              :binancePublicKey="binancePublicKey"
+                                              :userOrders="userOrders"
                                 />
                             </div>
                         </div> 
@@ -99,7 +101,8 @@ import TradingPanel from './Currencies/TradingPanel.vue';
 // This comes from the PHP. It's updated over favTickersReactive with axios calls too as we operate with them.
 const props = defineProps<{
     favTickers: string[],
-    test: string
+    // userOrders: Object[],
+    binancePublicKey: string
 }>();
 
 // reactive states (data)

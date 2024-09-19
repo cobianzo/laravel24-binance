@@ -16,7 +16,7 @@ export function formatNumber(value: number | string | null, maxDecimals: number 
   return parseFloat(formattedString).toString();
 }
 
-export function getAssetCurrencyFromTicker( symbol: string, allTickers : TickerType[] | null ): TickerType | null {
+export function getTickerInfoCurrencyFromTicker( symbol: string, allTickers : TickerType[] | null ): TickerType | null {
   const tickerInfo = allTickers !== null ? 
         allTickers.find( ticker => ticker.symbol === symbol ) 
         : null;;

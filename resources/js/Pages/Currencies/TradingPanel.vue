@@ -2,11 +2,13 @@
   // VueJS deps
   import { ref, onMounted, onBeforeUnmount, watch, computed, reactive } from 'vue';
 
+  // Child components
+  import Trade from './Trade.vue';
+
   // internal deps
-  import { TickerPriceType } from '@/types/ticker';
   import { getBinancePrice } from '@/api/binanceApi';
-  import { formatNumber, getAssetCurrencyFromTicker } from '@/utils/helpers';
-  import { TickerType, BalanceType } from '@/types/ticker';
+  import { formatNumber, getTickerInfoCurrencyFromTicker } from '@/utils/helpers';
+  import { TickerType, BalanceType, TradeOrderType } from '@/types/ticker';
 
   import { getUserBalances } from '@/api/binanceApi';
   import { getOptions, saveOptions } from '@/utils/localStorage-CRUD';
@@ -17,6 +19,8 @@
     selectedTicker: string,
     allTickers: TickerType[] | null,
     balances: BalanceType[] | null,
+    userOrders: Object[],
+    binancePublicKey: string,
     updateAllBalances: () => void
   }>();
 
@@ -25,11 +29,6 @@
   // =============
   const price = ref<number>(0);
   const loadingPrice = ref<number>(0);
-  const intervalId = ref<number>(0);
-  const intervalIncrement = ref<number>(0); // just a counter
-  const intervalCountdown = ref<number>(0);
-  const speedInterval = ref<number>(1); // 0: stop, 1, slow(every 30 secs), 5: medium, 10: fast ( every 1 sec )
-  const timeInterval  = computed<number>(() => speedInterval? (30000 - ((speedInterval.value / 10) * (30000 - 1000))) : 9999999 );
 
   // balance
   const selectedTickerInfo = ref<TickerType | null>();
@@ -41,32 +40,21 @@
     loss: getOptions( 'tradePercentages' )?.loss?? 0,
     lossPrice: 0
   });
-  const theTrade = reactive<{ amount: number }>({
-    amount: 0
+  const theTrade = reactive<TradeOrderType>({
+    symbol: '',
+    amount: getOptions( 'tradeAmount') ?? 0,
+    quantity: 0,
+    price: 0,
+    type: 'LIMIT',
+    side: 'BUY',
   })
 
   // METHODS and functions
   // ============
 
-  // setInterval to retrieve the up to date price of the selectedTicker every x seconds.
-  let intCountDwn = 0;
   const updateBinancePrice = async function() {
-    if (! props.selectedTicker) {
-      price.value = 0;
-      return;
-    }
-    intervalCountdown.value = timeInterval.value;
-    clearInterval(intCountDwn);
-    intCountDwn = setInterval( () => { intervalCountdown.value -= 1000 } , 1000)
-    loadingPrice.value = intervalIncrement.value;
-    getBinancePrice(props.selectedTicker).then((tickerAndPrice: TickerPriceType) => {
-      if (loadingPrice.value === intervalIncrement.value) {
-        price.value = tickerAndPrice.price;  
-        loadingPrice.value = 0;
-        intervalIncrement.value++;
-        console.log('TODELET.Updated price on interval', tickerAndPrice.price, intervalIncrement.value);
-      }
-    })
+    return; // todelete
+    
   }
 
   
@@ -74,13 +62,13 @@
     getUserBalances().then((response: BalanceType[]) => {
       console.log('TODELETE: For the current Ticker Asset currency: Retrieve balances from backend', response);
       // get current asset 
-      const buyingCurrency = getAssetCurrencyFromTicker( props.selectedTicker, props.allTickers );
-      selectedTickerInfo.value = buyingCurrency;
-      if (buyingCurrency && selectedTickerInfo && selectedTickerInfo.value) {
+      const tickerInfo = getTickerInfoCurrencyFromTicker( props.selectedTicker, props.allTickers );
+      selectedTickerInfo.value = tickerInfo;
+      if (tickerInfo && selectedTickerInfo && selectedTickerInfo.value) {
         // response is an Array of { symbol, amount }
-        const balance = response.find( (balance: BalanceType) => balance.symbol === buyingCurrency?.asset);
-        buyingCurrency.balance = balance?.amount ?? 0;
-        selectedTickerInfo.value = buyingCurrency;
+        const balance = response.find( (balance: BalanceType) => balance.symbol === tickerInfo?.asset);
+        tickerInfo.balanceAsset = balance?.amount ?? 0;
+        selectedTickerInfo.value = tickerInfo;
         
         // we can update also the balance in the global balance reactive var:
         // @TODO: we shouldnt update it directly, but using `emit` or an update prop function
@@ -92,7 +80,7 @@
         }
       } else {
         console.error('could not calculate balance for current buying currency, because we don\'t have ', 
-          buyingCurrency, props.selectedTicker, props.allTickers)
+          tickerInfo, props.selectedTicker, props.allTickers)
       }
 
     }).finally(() => {
@@ -101,17 +89,56 @@
     
   }
   
+  function handleClickedPartial(percent: number | string) {
+    console.log(`partial clicked`, percent, theTrade.amount, (selectedTickerInfo.value?.balanceAsset? selectedTickerInfo.value.balanceAsset : ''));
+    // percentage
+    if ( typeof percent === 'number') {
+      theTrade.amount = parseInt( formatNumber((selectedTickerInfo.value?.balanceAsset? selectedTickerInfo.value.balanceAsset : 0) * percent / 100, 0) );
+    } else {
+      //units (eg 100 USDT)
+      const units = parseInt(percent);
+      theTrade.amount = units;
+    }
+
+  }
+  
+
+  // websockets fun @TODO: add to the BinanceAPI.
+
+  // Function to open WebSocket connection
+  let ws: WebSocket | null = null;
+  const openWebSocket = (ticker: string, callback: (arg0: number) => void) => {
+    if (!ticker || !ticker.length) {
+      console.error('error trying to open socket, ' , ticker);
+      return;
+    }
+    const wsUrl = `wss://stream.binance.com:9443/ws/${ticker.toLowerCase()}@ticker`;
+    ws?.close();
+    ws = new WebSocket(wsUrl);
+    console.log('TODELET: connecting to socket, ' , wsUrl, ws);
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      callback(parseFloat(data.c));
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+  };
+
   // Logic for updating the price.
   // @TODO: ideally we'll use websockers, with an external server like Pusher and a Laravel event.
   
+  
   onMounted(() => {
     updateBinancePrice();
+    openWebSocket(props.selectedTicker, (newPrice: number) => price.value = newPrice );
     updateBalanceSelectedTicker();
-    intervalId.value = setInterval(() => updateBinancePrice(), timeInterval.value);
   });
 
   onBeforeUnmount(() => {
-    clearInterval(intervalId.value);
+    ws?.close();
   });
 
   // Watch for changes in percentages.gain or percentages.loss
@@ -130,9 +157,10 @@
       // update the price
       if (newTicker) {
         price.value = 0;
-        clearInterval(intervalId.value);
-        intervalIncrement.value = 0;
-        updateBinancePrice();
+        openWebSocket(newTicker.toLowerCase(), (newPrice: number) => {
+          price.value = newPrice;
+        });
+        // updateBinancePrice();
       }
 
       // update the selectedTickerInfo
@@ -141,7 +169,6 @@
     }
   );
 
-  
   // watch every change in  props.allTickers
   watch(
     () => props.allTickers,
@@ -156,23 +183,27 @@
   <div class="flex flex-col w-full p-4 bg-gray-100 text-dark font-bold rounded-lg shadow-md">
     <h2 class="m-0 py-0 px-3 inline-block translate-y-[-100%] bg-gray-400 rounded dark:bg-gray-800 text-white dark:text-white shadow">Trade panel</h2>
     
-    <div class="flex flex-row items-start gap-4">
+    <div class="the-columns-container flex flex-row items-start gap-4">
       <div class="the-ticker flex flex-col items-start">
-        <h3 class="text-2xl">{{props.selectedTicker}}</h3>
+        <h3 class="text-2xl text-secondary">{{props.selectedTicker}}</h3>
         <p class="text-3xl text-accent transition-opacity"
           :class="{ 'opacity-20': loadingPrice }"
           @click="price = 100"
           @dblclick="updateBinancePrice()"
           >{{
-            formatNumber(price)
+            formatNumber(price,4)
         }}</p>
 
-        <p>{{selectedTickerInfo?.base + '/' + selectedTickerInfo?.asset}}</p>
-        <p @click="theTrade.amount = selectedTickerInfo?.balance ?? 0 ">
-          balance for {{selectedTickerInfo?.asset}}:<br/> {{ selectedTickerInfo?.balance }}
-        </p>
-        <p>speed: {{ `${speedInterval} (${timeInterval}seg)` }}</p>
-        <p>refresh in: {{ `${formatNumber(intervalCountdown/1000, 0)} seg` }}</p>
+        
+        <div @click="theTrade.amount = selectedTickerInfo?.balanceAsset ?? 0 " class="text-gray-500 mt-3">
+          <p>
+            balance: 
+          </p>
+          <div class="text-accent hover:text-secondary hover:underline cursor-pointer">
+            {{ formatNumber(selectedTickerInfo?.balanceAsset,2) }} <span class="text-gray-400">{{selectedTickerInfo?.asset}}</span>
+          </div>
+            
+        </div>
 
       </div>
       <div class="the-trade-percentages flex flex-col items-start">
@@ -186,7 +217,7 @@
                 step="0.05" 
                 v-model="percentages.gain"
                 @change="saveOptions({ tradePercentages: percentages })" 
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-center w-[100px]"
                 placeholder="Introduce el % de ganancia"
               />
               <div class="flex flex-col items-end justify-center pl-2 text-gray-600 text-sm text-right">
@@ -206,7 +237,7 @@
                   step="0.05" 
                   v-model="percentages.loss" 
                   @change="saveOptions({ tradePercentages: percentages })" 
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-center w-[100px]"
                   placeholder="Introduce el % de pérdida"
                 />
                 <div class="flex flex-col items-end justify-center pl-2 text-gray-600 text-sm ">
@@ -236,16 +267,44 @@
               class="mt-1 block w-full border-t border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm rounded-md rounded-tr-none rounded-br-none"
               :placeholder="selectedTickerInfo?.asset?? 'set the amount'"
             />
-            <spa  n class="mt-1 inline-flex items-center px-3 text-sm text-gray-900 bg-gray-200 border border-gray-300 dark:bg-gray-600 dark:text-gray-400 dark:border-gray-600 rounded-md rounded-tl-none rounded-bl-none">
+            <span class="mt-1 inline-flex items-center px-3 text-sm text-gray-900 bg-gray-200 border border-gray-300 dark:bg-gray-200 dark:text-gray-500 dark:border-gray-100 rounded-md rounded-tl-none rounded-bl-none">
               {{selectedTickerInfo?.asset?? ''}}
-            </spa>
+            </span>
         </div>
+        
+        <ul class="flex flex-row justify-between w-full text-xs text-red-500 cursor-pointer">
+          <li
+            v-for="partial in [100, 50, 25, 10]"
+            class="hover:text-secondary"
+            @click="handleClickedPartial(partial)"
+            >
+            {{ partial }}%
+          </li>
+          <li class="hover:text-secondary"
+              @click="handleClickedPartial('100units')"
+          >
+            100 units
+          </li>
+        </ul>
+        
 
+      </div>
+      <div class="the-trade-action flex flex-col items-center flex-1">
+        <Trade 
+          :theTrade="theTrade"
+          :percentages="percentages"
+          :selectedTickerInfo="selectedTickerInfo"
+          :price="price"
+          :binancePublicKey="props.binancePublicKey"
+          :userOrders="props.userOrders"
+          />
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-
+.the-columns-container > div {
+  min-width: 200px;
+}
 </style>
