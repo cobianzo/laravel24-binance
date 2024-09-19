@@ -225,7 +225,7 @@ function activateBalancesTab() {
 
 /**
  * @TODO: For some reason this fn is called 3 times instead of one
- * on page load.
+ * on page load. 
  */
 const updateAllBalances = async () => {
     if (balances.value === null) {

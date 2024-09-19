@@ -296,6 +296,7 @@
           :theTrade="theTrade"
           :percentages="percentages"
           :selectedTickerInfo="selectedTickerInfo"
+          :allTickers="allTickers"
           :price="price"
           :binancePublicKey="props.binancePublicKey"
           />

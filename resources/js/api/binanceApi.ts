@@ -19,7 +19,7 @@ export const getUserBalances = async () => {
 export const placeBinanceOrder = async( symbol: string, quantity: number, price: number, side: 'BUY' | 'SELL', type: 'LIMIT' | 'MARKET' = 'LIMIT') => {
   try {
     console.info('TODELETE: placing a buying order for ', symbol, quantity, price, side, type);
-    const response = await axios.post(`/binance/order`, {
+    const response = await axios.post(`/binance/place-order`, {
       symbol, quantity, price, side, type
     });
     console.info('TODELETE respuesta de place order: ',response.data);

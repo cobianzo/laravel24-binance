@@ -38,7 +38,45 @@ class BinanceController extends Controller
 
 
 
-    public static function test() { return "this is a test"; }
+    public static function handleTestData() { 
+
+
+        // Get exchange information, including lot size details for each symbol
+        $api = self::getBinanceApi();
+        $exchangeInfo = $api->exchangeInfo();
+        $symbols = $exchangeInfo['symbols'];
+        $tickerInfo = [];
+        foreach($symbols as $symbol => $data) {
+            $filter = array_filter($data['filters'], fn($f) => ($f['filterType'] === 'LOT_SIZE'));
+            if (!empty($filter)) {
+                $filter = array_values($filter)[0];
+                $stepSize = isset($filter['stepSize'])? $filter['stepSize'] : 'N/A';
+            }
+            $tickerInfo[$symbol] = $stepSize;
+            
+        }
+        $tickers = json_decode(
+            file_get_contents(storage_path('app/public/tickers.json')),
+            true
+        );
+        echo '[';
+        foreach ($tickers as $ticker) {
+            $symbol = $ticker[0];
+            $stepSize = !empty( $tickerInfo[$symbol] ) ? $tickerInfo[$symbol]: 'Not';
+            echo '[';
+            echo '"'.$ticker[0].'",';
+            echo '"'.$ticker[1].'",';
+            echo ''.$ticker[2].',';
+            echo '"'.$ticker[3].'",';
+            echo ''.$ticker[4].',';
+            echo ",$stepSize]<br>";
+        }
+        echo ']';
+        
+        
+
+
+     }
     /**
      * Retrieves and formats all available tickers from the storage file.
      * 
@@ -56,6 +94,7 @@ class BinanceController extends Controller
             'precisionBase'  => $ticker[2],
             'asset'          => $ticker[3],
             'precisionAsset' => $ticker[4],
+            'stepSize'       => $ticker[5],
         ], $tickers);
         
         return $tickers;
@@ -77,8 +116,6 @@ class BinanceController extends Controller
     /**
      * Retrieves the user's balances from the Binance API.
      *
-     * @throws \Illuminate\Http\Client\RequestException if the request to the Binance API fails
-     * @return \Illuminate\Http\JsonResponse a JSON response containing the user's balances
      */
     public static function getUserBalances() {
         $api = self::getBinanceApi();
@@ -87,21 +124,39 @@ class BinanceController extends Controller
             return 0 !== intval( floatval( $balance['available'] ) + floatval( $balance['onOrder'] ) );
         });
         return $balances;
+        // { BTC => { available: '0.00000000', onOrder: '0.00000000', btcValue, btcTotal }
     }
 
     // Función para crear una orden en Binance
     public function placeOrder(\Illuminate\Http\Request $request)
     {
         $user = Auth::user(); // Obtener el usuario autenticado
+        
+        // Validate the incoming request parameters
+        $validated = $request->validate([
+            'symbol' => 'required|string',     // Trading pair, e.g., BTCUSDT
+            'quantity' => 'required|numeric',  // Quantity to buy
+            'price' => 'required|numeric',     // Price for the LIMIT order
+        ]);
 
-        // Assuming you're using Laravel and have set up HTTP requests
-        // Parámetros de la orden (puedes añadir validaciones)
-        $symbol      = $request->input('symbol');
-        $quantity    = $request->input('quantity');
-        $price       = $request->input('price');
-        $side        = $request->input('side'); // 'BUY' o 'SELL'
-        $type        = $request->input('type', 'LIMIT'); // 'LIMIT' o 'MARKET'
+        // Extract validated parameters
+        $symbol = $validated['symbol'];
+        $quantity = $validated['quantity'];
+        $price = $validated['price'];
+
+        $side  = $request->input('side'); // 'BUY' o 'SELL'
+        $type  = $request->input('type', 'LIMIT'); // 'LIMIT' o 'MARKET'
         $timeInForce = 'GTC'; // Good Till Canceled
+
+        $api = self::getBinanceApi();
+        if ( $side === 'BUY' ) {
+            try {
+                $response = $api->buy($symbol, $quantity, $price, $type);
+                return $response;
+            } catch (\Exception $e) {
+                return $e->getMessage();
+            }
+        }
 
         // Construcción del cuerpo de la solicitud
         $body = [
@@ -154,17 +209,17 @@ class BinanceController extends Controller
     // Endpoint: PUT /binance/list-orders
     public static function getUserOrders( $args )
     {
-        $args = array_merge(['symbol' => 'BTCUSDT'], $args);
-        $response = self::sendBinanceRequest( 'GET', 'v3/allOrders', $args, Auth::user());
-        
-        if ($response->successful()) {
-            return response()->json($response->json());
-        }
-        return $response->json(['error' => 'orders could not be retrievend']); // Devuelve las órdenes como JSON
+        $args   = array_merge(['symbol' => 'BTCUSDT'], $args);
+        $api    = self::getBinanceApi();
+        $orders = $api->orders($args['symbol']);
+        return $orders;
     }
 
 
-    // HELPER: Función estática que gestiona las solicitudes a la API de Binance
+    // HELPER: Función estática que gestiona las solicitudes a la API de Binance.
+    // Works well, but with the "jaggedsoft/php-binance-api": we dont need it.
+    // Usage: $response = self::sendBinanceRequest('GET', 'v3/allOrders', ['symbol' => 'BTCUSDT'], Auth::user());
+    /** 
     public static function sendBinanceRequest($method, $url, $body = [], $user)
     {
         $timestamp = round(microtime(true) * 1000);
@@ -186,6 +241,7 @@ class BinanceController extends Controller
 
         return $response;
     }
+    */
 
 }
 

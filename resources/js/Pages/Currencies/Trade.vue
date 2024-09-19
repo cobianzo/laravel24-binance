@@ -3,12 +3,14 @@
   import { TickerType, BalanceType, TradeOrderType } from '@/types/ticker';  
   import { getUserOrders, placeBinanceOrder, apiCallTest, getUserBalances } from '@/api/binanceApi';
   import { saveOptions } from '@/utils/localStorage-CRUD';
+import { formatNumber, getTickerInfoCurrencyFromTicker } from '@/utils/helpers';
 
   // Props sent from parent
   const props = defineProps<{
     // sent from parent
     theTrade: TradeOrderType,
     price: number,
+    allTickers: TickerType[] | null,
     percentages: { gain: number, gainPrice: number, loss: number, lossPrice: number },
     selectedTickerInfo: TickerType,
     binancePublicKey: string
@@ -20,13 +22,19 @@
   function handleUpdateTradeOrder() {
     console.log('TODELETE: updating trade order');
     props.theTrade.symbol = props.selectedTickerInfo.symbol;
-    props.theTrade.quantity = props.theTrade.amount / props.price;
+    let quantity = props.theTrade.amount / props.price;
+    const {stepSize} = props.selectedTickerInfo;
+    const quantityDecimals = stepSize.toString().split('.')[1].length;
+    props.theTrade.quantity = Number(quantity.toFixed(quantityDecimals));
     props.theTrade.price = props.price;
     props.theTrade.side = 'BUY'
     props.theTrade.type = 'LIMIT';
   }
   function handlePlaceOrder() {
     const { symbol, quantity, price, side, type } = props.theTrade;
+    if (!props.theTrade.symbol)
+    props.theTrade.symbol = props.selectedTickerInfo.symbol;
+    console.log('>>>>>>>>>>>>>>', props.selectedTickerInfo.symbol, props.theTrade);
     placeBinanceOrder( symbol, quantity, price, side, type);
 
     // console.log('TODELETE: placing a stop loss GAIN ', props.percentages.gainPrice);
@@ -41,10 +49,11 @@
       return;
     }
     if (  props.selectedTickerInfo ) {
+      // @TODO: Aparently this is called several times on page LOAD. @TOFIX
       const response = await getUserOrders( props.selectedTickerInfo.symbol ); 
       if (response) {
         // some more validation?
-        // @TODO: can we ask only for reent orders in the endpoint already?
+        // @TODO: can we ask only for recent orders in the endpoint already?
         console.info('%c ORders: ', 'font-size: 2rem; background:black;color:white', response);
         const daysOld = 5;
         const recentOrders = response.filter(o => o.time > Date.now() - 1000 * 60 * 60 * 24 * daysOld);
@@ -52,6 +61,8 @@
       }
     }
   }
+
+  // WIP: for the websockets
   function updateOrders(newOrder) {
     orders.value = [...orders.value, newOrder];
   }
@@ -81,15 +92,14 @@
     <div class="trade-data  flex flex-row items-start justify-center w-full text-xs gap-3">
       <div class="flex flex-1 flex-col">
         <div class="flex flex-row justify-between">
-          <span class="text-center">symbol<br/>{{ props.theTrade.symbol }}</span>
-          <span class="text-center">quantity<br/> {{ props.theTrade.quantity }}</span>
-          <span class="text-center">side<br/> {{ props.theTrade.side }}</span>
-        </div>
-        <div class="flex flex-row justify-between">
           <span class="text-center">type<br/> {{ props.theTrade.type }}</span>
+          <span class="text-center">quantity<br/> {{ props.theTrade.quantity }}</span>
+        </div>
+        <div class="flex flex-row justify-center">
+          
           <span class="text-center">price<br/>
             <input class="text-xs w-[90px] px-2 py-1 border rounded-md" type="number" step="0.01" v-model="props.theTrade.price" />
-            {{ props.theTrade.price }}
+            {{ formatNumber(props.theTrade.price - props.price, 2) }}
           </span>
         </div>
       </div>
@@ -122,7 +132,7 @@
       <div class="w-full border border-gray-400">
         <table class="table-auto w-full border-collapse">
           <thead>
-            <tr class="bg-gray-200">
+            <tr class="bg-gray-200 text-sm">
               <th class="text-left px-1 py-0">Date</th>
               <th class="text-left py-0 overflow-hidden max-w-[25px]">Type</th>
               <th class="text-left px-1 py-0">Side</th>
@@ -132,7 +142,10 @@
             </tr>
           </thead>
           <tbody class="text-xs">
-            <tr v-for="order in orders" :key="order.id" class="border-t">
+            <tr v-for="order in orders" 
+                :key="order.id" class="border-t"
+                :class="{'bg-green-100 from-green-100 to-green-300 animate-pulse': order.status === 'NEW'}"
+            >
               <td class="px-1 py-0">{{ new Date(order.time).toLocaleString() }}</td>
               <td class="py-0 overflow-hidden max-w-[25px]">
                 {{ order.type === 'MARKET' ? 'MRK' : (
@@ -144,7 +157,9 @@
               </td>
               <td class="px-1 py-0">{{ order.status }}</td>
               <td class="px-1 py-0">{{ order.origQty }} ({{ (order.executedQty / order.origQty * 100).toFixed(2) }}%)</td>
-              <td class="px-1 py-0">{{ order.price }}</td>
+              <td class="px-1 py-0">
+                {{ formatNumber(order.price) }}
+                {{ getTickerInfoCurrencyFromTicker(order.symbol, props.allTickers ).asset }}</td>
             </tr>
           </tbody>
         </table>
