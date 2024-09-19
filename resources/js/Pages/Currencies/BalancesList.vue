@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { BalanceType } from '@/types/ticker';
+  import { AllBalancesType, BalanceType } from '@/types/ticker';
   import { watch, ref, Ref } from 'vue';
   import { getBinancePrice } from '@/api/binanceApi';
   import { formatNumber } from '@/utils/helpers';
@@ -7,8 +7,8 @@
   // propd coming from the parent
   const props = defineProps<{
     updateLoading?: (arg0: string) => void,
-    balances: BalanceType[] | null,
-    selectBalance: (arg0: BalanceType) => void
+    balances: AllBalancesType | null,
+    selectBalance: (arg0: string) => void
     updateBalanceSelectedTicker: (arg0: BalanceType) => void
   }>();
 
@@ -30,15 +30,18 @@
     return price;
   }
 
-  const updateBalancesWithPrice = async (newBalances : BalanceType[] | null) => {
+  const updateBalancesWithPrice = async (newBalances : AllBalancesType | null) => {
     if (newBalances === null) {
         balancesWithPrice.value = {};
       } else {
         // these calculations take a long time, so we show a loading UI
         if (props.updateLoading) props.updateLoading('portfolio-loading');
 
-        const setOfPromises = newBalances.map(async (balance) => {
-          return updateBalanceWithPrice(balance.symbol, balance.amount);
+        const setOfPromises = Object.keys(newBalances).map(async (symbol) => {
+          const available = newBalances[symbol].available;
+          const availableN: number = typeof  available === 'string' ? parseFloat(available) : available;
+          
+          return updateBalanceWithPrice(symbol, availableN);
         });
         
         Promise.all(setOfPromises).finally( () => {
@@ -62,17 +65,14 @@
     if ( toSymbol === symbol ) {
       return 1;
     }
-    let price = { price: 0, symbol: ''};
+    let price = 0;
     try {
       price = await getBinancePrice(`${symbol}${toSymbol}`);
     } catch (e) {
       console.warn(`No price for ${symbol}`);
     }
     console.log(`Calculated price for ${symbol} into ${toSymbol}:`, price);
-    if (price?.price) {
-      return price.price;
-    }
-    return 0;
+    return price?? 0;
   }
 
   function myDebugBtnClick() {
@@ -87,28 +87,32 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
     <div
         v-if="props.balances !== null"
-        v-for="currencyAndBalance in props.balances"
-        :key="currencyAndBalance.symbol"
+        v-for="(symbol, index) in Object.keys(props.balances)"
+        :key="symbol"
         class="p-4 bg-gray-100 rounded-lg shadow-md flex flex-col justify-between items-center cursor-pointer hover:bg-green-100"
-        @click="props.selectBalance(currencyAndBalance); updateBalanceWithPrice(currencyAndBalance.symbol, currencyAndBalance.amount);"
+        @click="props.selectBalance(symbol); updateBalanceWithPrice(symbol, props.balances[symbol].available);"
     >
       
       <div class="w-full grid grid-cols-2 gap-2">
-        <span class="font-semibold text-xl text-dark">{{ currencyAndBalance.symbol }}</span>
+        <span class="font-semibold text-xl text-dark">{{ symbol }}</span>
         <span class="text-success font-bold text-xl text-right">
-          {{ formatNumber(currencyAndBalance.amount, 5) }}
+          {{ formatNumber(props.balances[symbol].available, 5) }}
         </span>
       </div>
       <div class="w-full grid grid-cols-2 gap-2">
         <span class="font-semibold text-sm text-gray-900">{{
-          balancesWithPrice[ currencyAndBalance.symbol ] ?
-          formatNumber(balancesWithPrice[ currencyAndBalance.symbol ].price)
+          balancesWithPrice[ symbol ] ?
+          formatNumber(balancesWithPrice[ symbol ].price)
           :
           ''
         }}</span>
-        <span v-if="balancesWithPrice[ currencyAndBalance.symbol ]?.balanceValue"
+        <span v-if="balancesWithPrice[ symbol ]?.balanceValue"
           class="font-semibold text-sm text-gray-900 text-right">
-          <b class="text-gray-500 pr-2">$</b>{{ Math.round(balancesWithPrice[ currencyAndBalance.symbol ].balanceValue) }}
+          <b class="text-gray-500 pr-2">$</b>{{ Math.round(balancesWithPrice[ symbol ].balanceValue) }}
+          <b class="text-red-500 text-xs" v-if="parseFloat( formatNumber(props.balances[symbol].onOrder) )">({{ 
+           formatNumber(props.balances[symbol].onOrder, 2)
+          }})</b>
+          
         </span>
       </div>
     </div>

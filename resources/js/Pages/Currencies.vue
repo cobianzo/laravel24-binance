@@ -19,7 +19,6 @@
                                               :balances="balances"
                                               :updateAllBalances="updateAllBalances"
                                               :binancePublicKey="binancePublicKey"
-                                              :userOrders="userOrders"
                                 />
                             </div>
                         </div> 
@@ -101,7 +100,6 @@ import TradingPanel from './Currencies/TradingPanel.vue';
 // This comes from the PHP. It's updated over favTickersReactive with axios calls too as we operate with them.
 const props = defineProps<{
     favTickers: string[],
-    // userOrders: Object[],
     binancePublicKey: string
 }>();
 
@@ -112,7 +110,7 @@ const allTickers = ref<TickerType[]>([]);
 const favTickersReactive = ref<string[]>(props.favTickers);
 const favTickersWithPrice = ref<TickerPriceType[]|null>(null);
 // => Balances (portfolio tab)
-const balances = ref<BalanceType[]|null>(null);
+const balances = ref<{ [symbol: string]: BalanceType } |null>(null);
 // => Trading panel
 const selectedTicker = ref<string>(getOptions('selectedTicker')?? '');
 
@@ -133,7 +131,10 @@ watchEffect(async () => {
             console.log('getting price for ', s);
             if (s) {
                 const price = await getBinancePrice(s); // Assuming this is an async function
-                results.push(price as TickerPriceType);
+                results.push({
+                  symbol: s,
+                  price: price  
+                } as TickerPriceType);
             }
         }
     }
@@ -211,8 +212,8 @@ function deleteFavTicker(tickerSymbol: string): void {
 }
 
 // => Balances Tab (portfolio)
-function selectBalance(balance: BalanceType) : void {
-    console.log('TODELET> selected: ', balance);
+function selectBalance(balance: string) : void {
+    console.log('TODELET> selected: ', balance, balances);
 }
 
 function activateBalancesTab() {
@@ -222,13 +223,17 @@ function activateBalancesTab() {
     updateAllBalances();
 }
 
+/**
+ * @TODO: For some reason this fn is called 3 times instead of one
+ * on page load.
+ */
 const updateAllBalances = async () => {
     if (balances.value === null) {
-        getUserBalances().then((response: BalanceType[]) => {
+        getUserBalances().then((response: { [symbol: string]: BalanceType }) => {
             console.log('TODELETE: Retrieve balances from backend', response);
             balances.value = response;
         }).finally(() => {
-        });
+    });
     }
 }
 

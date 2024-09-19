@@ -22,7 +22,7 @@ Route::get('/currencies', function () {
     return Inertia::render('Currencies', [ 
         'favTickers'       => array_values(json_decode( auth()->user()->fav_tickers ?? '[]', true )),
         // 'allTickers'    => BinanceController::getAllTickers(), We don't want to lose time in the server side.
-        'binancePublicKey' => auth()->user()->binance_public_key,
+        'binancePublicKey' => BinanceController::get_public_key(),
         'userOrders'       => [], // BinanceController::getUserOrders(),
     ] );
 })->middleware(['auth', 'verified'])->name('currencies');

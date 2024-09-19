@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { computed, watch, ref, onMounted } from 'vue';
   import { TickerType, BalanceType, TradeOrderType } from '@/types/ticker';  
-  import { getUserOrders } from '@/api/binanceApi';
+  import { getUserOrders, placeBinanceOrder, apiCallTest, getUserBalances } from '@/api/binanceApi';
   import { saveOptions } from '@/utils/localStorage-CRUD';
 
   // Props sent from parent
@@ -11,7 +11,6 @@
     price: number,
     percentages: { gain: number, gainPrice: number, loss: number, lossPrice: number },
     selectedTickerInfo: TickerType,
-    userOrders: Object[], // the initial orders when page was loaded (not in use)
     binancePublicKey: string
   }>();
 
@@ -27,23 +26,26 @@
     props.theTrade.type = 'LIMIT';
   }
   function handlePlaceOrder() {
-    console.log('TODELETE: placing a buying order for ', props.theTrade.amount, props.selectedTickerInfo?.asset);
+    const { symbol, quantity, price, side, type } = props.theTrade;
+    placeBinanceOrder( symbol, quantity, price, side, type);
 
-    console.log('TODELETE: placing a stop loss GAIN ', props.percentages.gainPrice);
-    console.log('TODELETE: placing a stop loss LOSS ', props.percentages.lossPrice);
+    // console.log('TODELETE: placing a stop loss GAIN ', props.percentages.gainPrice);
+    // console.log('TODELETE: placing a stop loss LOSS ', props.percentages.lossPrice);
   }
 
   // Methods
-  const updateOrdersForSelectedTicker = async() => {
-    console.info('letseee');
-    if ( orders.value !== null ) {
+  const getOrdersForSelectedTicker = async( reset:boolean = false) => {
+    console.log('TODEL Trying to retrieve orders for the first time for ', props.selectedTickerInfo?.symbol);
+    if ( orders.value !== null && reset === false ) {
+      console.log( 'Orders are not null, It was loaded before. ');
       return;
     }
     if (  props.selectedTickerInfo ) {
       const response = await getUserOrders( props.selectedTickerInfo.symbol ); 
       if (response) {
         // some more validation?
-        console.info('%c ORders: ', 'font-size: 2rem; backgroun:black;color:white', orders);
+        // @TODO: can we ask only for reent orders in the endpoint already?
+        console.info('%c ORders: ', 'font-size: 2rem; background:black;color:white', response);
         const daysOld = 5;
         const recentOrders = response.filter(o => o.time > Date.now() - 1000 * 60 * 60 * 24 * daysOld);
         orders.value = recentOrders;
@@ -68,7 +70,7 @@
   // Lifecycle
   onMounted(() => {
     // init the orders. 
-    updateOrdersForSelectedTicker();
+    getOrdersForSelectedTicker();
 
   })
 
@@ -95,11 +97,20 @@
         <button class="inline-flexitems-center px-4 py-2 border border-transparent text-center shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex-none"
           @click="handleUpdateTradeOrder">update</button>
         
-        <button class="inline-flex items-center px-4 py-2 border border-transparent text-center shadow-sm text-sm
-           font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        <button class="inline-flex items-center px-4 py-2 border border-transparent text-center shadow-sm 
+           rounded-md font-medium text-sm justify-center text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           @click="handlePlaceOrder">
-          Place order
+          ➽ Place order
         </button>
+
+        <button class="inline-flex items-center px-4 py-2 border border-transparent text-center shadow-sm text-sm
+           font-medium rounded-md text-dark bg-red-200 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+           @click="()=> { const cosa = 'cosas'; console.log('cpsas', cosa); getOrdersForSelectedTicker( true ) ; }"
+           >
+           Debug: show orders
+          </button>
+        <button @click="() => apiCallTest( 'param here ')">Other test</button>
+        <button @click="() => getUserBalances()">Another test</button>
       </div>
     </div>
 
@@ -117,6 +128,7 @@
               <th class="text-left px-1 py-0">Side</th>
               <th class="text-left px-1 py-0">Status</th>
               <th class="text-left px-1 py-0">Quantity</th>
+              <th class="text-left px-1 py-0">Price</th>
             </tr>
           </thead>
           <tbody class="text-xs">
@@ -132,6 +144,7 @@
               </td>
               <td class="px-1 py-0">{{ order.status }}</td>
               <td class="px-1 py-0">{{ order.origQty }} ({{ (order.executedQty / order.origQty * 100).toFixed(2) }}%)</td>
+              <td class="px-1 py-0">{{ order.price }}</td>
             </tr>
           </tbody>
         </table>

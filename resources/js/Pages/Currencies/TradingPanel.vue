@@ -19,7 +19,6 @@
     selectedTicker: string,
     allTickers: TickerType[] | null,
     balances: BalanceType[] | null,
-    userOrders: Object[],
     binancePublicKey: string,
     updateAllBalances: () => void
   }>();
@@ -59,14 +58,17 @@
 
   
   const updateBalanceSelectedTicker = async function() {
-    getUserBalances().then((response: BalanceType[]) => {
+    getUserBalances().then((response) => {
       console.log('TODELETE: For the current Ticker Asset currency: Retrieve balances from backend', response);
       // get current asset 
       const tickerInfo = getTickerInfoCurrencyFromTicker( props.selectedTicker, props.allTickers );
       selectedTickerInfo.value = tickerInfo;
       if (tickerInfo && selectedTickerInfo && selectedTickerInfo.value) {
         // response is an Array of { symbol, amount }
-        const balance = response.find( (balance: BalanceType) => balance.symbol === tickerInfo?.asset);
+        const balance = {
+          amount: response[selectedTickerInfo.value.asset]['available'],
+          symbol: selectedTickerInfo.value.symbol
+        };
         tickerInfo.balanceAsset = balance?.amount ?? 0;
         selectedTickerInfo.value = tickerInfo;
         
@@ -296,7 +298,6 @@
           :selectedTickerInfo="selectedTickerInfo"
           :price="price"
           :binancePublicKey="props.binancePublicKey"
-          :userOrders="props.userOrders"
           />
       </div>
     </div>

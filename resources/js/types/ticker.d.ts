@@ -14,9 +14,16 @@ export interface TickerPriceType {
 }
 
 export interface BalanceType {
-  amount: number;
-  symbol: string;
-}
+  available: string | number,
+  btcTotal?: string | number,
+  btcValue?:string | number,
+  onOrder?: string | number,
+  price?: number
+};
+
+export interface AllBalancesType {
+  [string] : BalanceType
+};
 
 export interface TradeOrderType {
   symbol: string;

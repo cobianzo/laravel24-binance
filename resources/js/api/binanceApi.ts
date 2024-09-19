@@ -3,34 +3,35 @@ import { TickerPriceType } from '@/types/ticker';
 
 // Función para obtener el precio de una moneda específica
 // returns { symbol: BTCUSTD, price: 56452.0004344}
-export const getBinancePrice = async (symbol: string): Promise<TickerPriceType> => {
-  try {
-    const response = await axios.get<TickerPriceType>(`/binance/prices/${symbol}`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching Binance price for ${symbol}:`, error);
-    throw error;
-  }
+export const getBinancePrice = async (symbol: string): Promise<number> => {
+  const price = await axios.get<number>(`/binance/prices/${symbol}`);
+  return price.data ?? 0;
 };
 
 export const getUserBalances = async () => {
+  console.log('TODELET:all ANTES: ');
   const response = await axios.put(`/binance/balances`);
-  console.log('TODELET:all info for account user: ', response);
+  console.log('%cTODELET:all DESPUES: ', 'color:white;background:red;font-size:2rem',response.data);
   return response.data;
 }
 
 // place orders functions
 export const placeBinanceOrder = async( symbol: string, quantity: number, price: number, side: 'BUY' | 'SELL', type: 'LIMIT' | 'MARKET' = 'LIMIT') => {
   try {
-    const response = await axios.post('/binance/order', {
-      symbol,
-      quantity,
-      price,
-      side,
-      type: type ?? 'LIMIT'
+    console.info('TODELETE: placing a buying order for ', symbol, quantity, price, side, type);
+    const response = await axios.post(`/binance/order`, {
+      symbol, quantity, price, side, type
     });
-    console.log('Order placed:', response.data);
-    return response.data;
+    console.info('TODELETE respuesta de place order: ',response.data);
+    // const response = await axios.post('/binance/order', {
+    //   symbol,
+    //   quantity,
+    //   price,
+    //   side,
+    //   type: type ?? 'LIMIT'
+    // });
+    // console.log('Order placed:', response);
+    // return response.data;
   } catch (error) {
     console.error('Error placing order:', error);
     return null;
@@ -68,6 +69,16 @@ export const placeBinanceOCOOrder = async function (
 }
 
 export const getUserOrders = async function( tickerSymbol: string) {
-  const response = await axios.put(`/binance/list-orders?symbol=${tickerSymbol}`);
+  const response = await axios.get(`/binance/list-orders?symbol=${tickerSymbol}`);
+  return response.data; 
+}
+
+// JUST FOR TESTING @TODELETE:
+export const apiCallTest = async function( justOneParam: string) {
+  console.log('%cBEFORE CALL /test-data', 'background:red;color:white;font-size:2rem;', justOneParam);
+  const response = await axios.post(`/test-data`, {
+    param1: justOneParam
+  });
+  console.log('%cAFTER CALL', 'background:red;color:white;font-size:2rem;', response.data);
   return response.data; 
 }

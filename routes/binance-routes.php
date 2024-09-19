@@ -10,10 +10,13 @@ Route::get('/binance/prices/{symbol}', [ BinanceController::class, 'getTickerPri
 Route::get('/binance/alltickers', [ BinanceController::class, 'getAllTickers' ]);
 Route::put('/binance/balances', [BinanceController::class, 'getUserBalances'])->middleware('auth');
 // orders:
-Route::post('/binance/order', [BinanceController::class, 'placeOrder'])->middleware('auth')->name('binance.placeOrder');
-Route::post('/binance/order/oco', [BinanceController::class, 'placeOCOOrder'])->middleware('auth')->name('binance.placeOCOOrder');
-Route::put('/binance/list-orders', fn() => BinanceController::getUserOrders(request()->all()))->middleware('auth')->name('binance.listOrders');
+Route::post('/binance/order', [BinanceController::class, 'placeOrder']);
 
+Route::post('/binance/order/oco', [BinanceController::class, 'placeOCOOrder'])->middleware('auth')->name('binance.placeOCOOrder');
+Route::get('/binance/list-orders', fn() => BinanceController::getUserOrders(request()->all()))->middleware('auth')->name('binance.listOrders');
+
+// JUST FOR TESTING @TODELETE
+Route::post('/test-data', [BinanceController::class, 'handleTestData'])->middleware('auth');
 
 
 // Internal Binance routes

@@ -6,9 +6,38 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Auth;
 
+use Binance\API;
 
 class BinanceController extends Controller
 {
+
+    const TESTING       = 0;
+    const API_BASE      = 'https://api.binance.com/api/';
+    const API_BASE_TEST = 'https://testnet.binance.vision/api/';
+
+    public static function getBinanceApi() {
+        return new API(self::get_public_key(), self::get_secret_key());
+    }
+    public static function get_api_base() {
+        return self::TESTING ? self::API_BASE_TEST : self::API_BASE;
+    }
+    public static function get_public_key() {
+        if ( self::TESTING ) {
+            $test_public = 'WCXbqk9MuCQ5NahmiTVmizTG3lBzug0NBx28rKJdwwUDlQvK3CSH0xpLhTrMp11I';
+            return $test_public;
+        }
+        return Auth::user()->binance_public_key;
+    }
+    public static function get_secret_key() {
+        if ( self::TESTING ) {
+            $test_secret = 'kK0467IKkywRwJFopD52WKuPESx80ZebVQdxBn8H6cetam1uh0CRE19eZHQva0um';
+            return $test_secret;
+        }
+        return Auth::user()->binance_secret_key;
+    }
+
+
+
     public static function test() { return "this is a test"; }
     /**
      * Retrieves and formats all available tickers from the storage file.
@@ -39,19 +68,10 @@ class BinanceController extends Controller
      * @param string $ticker The ticker symbol to retrieve the price for.
      * @return \Illuminate\Http\JsonResponse The response from the Binance API.
      */
-    public function getTickerPrice( string $symbol ) : \Illuminate\Http\JsonResponse
+    public function getTickerPrice( string $symbol )
     {
-        // @TODO: save the API base endpoint as a const.
-        $response = Http::get("https://api.binance.com/api/v3/ticker/price", [
-            'symbol' => $symbol
-        ]);
-
-        if ($response->successful()) {
-            return response()->json($response->json());
-        }
-
-        return response()->json(['error' => 'Error fetching data from Binance'], 500);
-
+        $api    = self::getBinanceApi();
+        return $api->price($symbol);
     } // end fn
 
     /**
@@ -61,32 +81,20 @@ class BinanceController extends Controller
      * @return \Illuminate\Http\JsonResponse a JSON response containing the user's balances
      */
     public static function getUserBalances() {
-        $user = Auth::user();
-
-        $response = self::sendBinanceRequest('GET', 'v3/account', [], $user);
-
-        if ($response->successful()) {
-            $balances = $response->json()['balances'];
-            // return  $balances;
-            $result = collect($balances)
-                ->filter(fn ($balance) => $balance['free'] > 0)
-                ->values()
-                ->map(fn ($balance) => [
-                    'symbol' => $balance['asset'],
-                    'amount' => $balance['free'],
-            ])->toArray();
-
-            return response()->json($result);
-        }
-
-        return response()->json(['error' => 'Error fetching data from Binance'], 500);
+        $api = self::getBinanceApi();
+        $balances = $api->balances();
+        $balances = array_filter($balances, function ($balance) {
+            return 0 !== intval( floatval( $balance['available'] ) + floatval( $balance['onOrder'] ) );
+        });
+        return $balances;
     }
 
     // Función para crear una orden en Binance
-    public function placeOrder(Request $request)
+    public function placeOrder(\Illuminate\Http\Request $request)
     {
         $user = Auth::user(); // Obtener el usuario autenticado
 
+        // Assuming you're using Laravel and have set up HTTP requests
         // Parámetros de la orden (puedes añadir validaciones)
         $symbol      = $request->input('symbol');
         $quantity    = $request->input('quantity');
@@ -100,9 +108,10 @@ class BinanceController extends Controller
             'symbol'      => $symbol,
             'side'        => $side,
             'type'        => $type,
-            'timeInForce' => $timeInForce,
-            'quantity'    => $quantity,
-            'price'       => $price,
+            // 'stopPrice'   => $price + 1,
+            'quantity'    => number_format($quantity, 0, '.', ''),
+            'price'       => number_format($price, 0, '.', ''),
+            'recvWindow'  => 60000,
         ];
 
         // Llamada a la función estática que interactúa con la API de Binance
@@ -162,7 +171,7 @@ class BinanceController extends Controller
         $queryString = http_build_query(array_merge($body, ['timestamp' => $timestamp]));
 
         // Crear la firma para autenticar la solicitud
-        $signature = hash_hmac('sha256', $queryString, $user->binance_secret_key);
+        $signature = hash_hmac('sha256', $queryString, self::get_secret_key());
 
         // Completar la URL con la firma
         $fullUrl = $url . '?' . $queryString . '&signature=' . $signature;
@@ -172,12 +181,11 @@ class BinanceController extends Controller
 
         // Realizar la solicitud HTTP a Binance
         $response = Http::withHeaders([
-            'X-MBX-APIKEY' => $user->binance_public_key,
-        ])->$method('https://api.binance.com/api/' . $fullUrl);
+            'X-MBX-APIKEY' => self::get_public_key(),
+        ])->$method( self::get_api_base() . $fullUrl);
 
         return $response;
     }
-
 
 }
 
