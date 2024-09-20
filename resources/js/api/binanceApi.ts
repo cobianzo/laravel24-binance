@@ -23,15 +23,6 @@ export const placeBinanceOrder = async( symbol: string, quantity: number, price:
       symbol, quantity, price, side, type
     });
     console.info('TODELETE respuesta de place order: ',response.data);
-    // const response = await axios.post('/binance/order', {
-    //   symbol,
-    //   quantity,
-    //   price,
-    //   side,
-    //   type: type ?? 'LIMIT'
-    // });
-    // console.log('Order placed:', response);
-    // return response.data;
   } catch (error) {
     console.error('Error placing order:', error);
     return null;
@@ -44,27 +35,28 @@ export const placeBinanceOCOOrder = async function (
   symbol: string,
   side: 'BUY' | 'SELL',
   quantity: number,
-  price: number,
-  stopPrice: number,
-  stopLimitPrice: number
+  price: number,        // price of sell to gain
+  stopPrice: number,    // trigger to set the next line
+  stopLimitPrice: number// price to seel to lose
 ) {
     try {
-        // Enviar los parámetros de la orden OCO al backend
-        const response = await axios.post('/binance/order/oco', {
-            symbol: symbol,            // Ticker del par (ej: BTCUSDT)
-            side: side,                // 'BUY' o 'SELL'
-            quantity: quantity,        // Cantidad que se quiere operar
-            price: price,              // Precio límite - vende y recibe ganancia
-            stopPrice: stopPrice,      // Precio de activación del Stop-Limit a stopLimitPrice
-            stopLimitPrice: stopLimitPrice // Precio límite del Stop-Limit: vender y aceptar perdidas
-        });
+      console.log('OCO Order placeing... BEFORE successfully:', symbol, side, quantity, price, stopPrice, stopLimitPrice);
+      // Enviar los parámetros de la orden OCO al backend
+      const response = await axios.post('/binance/order/oco', {
+          symbol: symbol,            // Ticker del par (ej: BTCUSDT)
+          side: side,                // 'BUY' o 'SELL'
+          quantity: quantity,        // Cantidad que se quiere operar
+          price: price,              // Precio límite - vende y recibe ganancia
+          stopPrice: stopPrice,      // Precio de activación del Stop-Limit a stopLimitPrice
+          stopLimitPrice: stopLimitPrice // Precio límite del Stop-Limit: vender y aceptar perdidas
+      });
 
-        // Si la orden es exitosa, imprime los resultados
-        console.log('OCO Order placed successfully:', response.data);
+      // Si la orden es exitosa, imprime los resultados
+      console.log('OCO Order placed successfully:', response.data);
     } catch (error) {
-        // Manejar errores
-        console.error('Error placing OCO order:', error);
-        alert('Error placing order. Please try again.');
+      // Manejar errores
+      console.error('Error placing OCO order:', error);
+      alert('Error placing order. Please try again.');
     }
 }
 

@@ -60,7 +60,12 @@
                                 :class="{ 'opacity-25': loading === 'portfolio-loading' }"
                                 >
                                 
-                                <BalancesList :balances="balances" :selectBalance="selectBalance" :updateLoading="updateLoading" />
+                                <BalancesList 
+                                    :balances="balances"
+                                    :selectBalance="selectBalance"
+                                    :updateLoading="updateLoading" 
+                                    :allTickers="allTickers"
+                                />
                             </div>
                         </div>
                         

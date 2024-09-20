@@ -22,3 +22,24 @@ export function getTickerInfoCurrencyFromTicker( symbol: string, allTickers : Ti
         : null;;
   return tickerInfo ?? null;
 }
+
+// given 0.001, returns 3. For 0.00001, returns 5.
+export function countDecimals(number: number) {
+  const str = number.toString();
+  
+  // Check if the number has a decimal point and count digits after it
+  if (str.includes('.')) {
+    return str.split('.')[1].length;
+  } else {
+    return 0; // If there's no decimal point, it has 0 decimal places
+  }
+}
+
+
+export function stepSizeDecimalsForTicker( symbol: string, allTickers: TickerType[] ) {
+  const find = allTickers.find( t => t.symbol === symbol );
+  if (find?.stepSize) {
+    return countDecimals(find.stepSize);
+  }
+  return 0;
+}

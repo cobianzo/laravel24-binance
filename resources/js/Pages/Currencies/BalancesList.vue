@@ -1,12 +1,13 @@
 <script setup lang="ts">
-  import { AllBalancesType, BalanceType } from '@/types/ticker';
+  import { AllBalancesType, BalanceType, TickerType } from '@/types/ticker';
   import { watch, ref, Ref } from 'vue';
   import { getBinancePrice } from '@/api/binanceApi';
-  import { formatNumber } from '@/utils/helpers';
+  import { formatNumber, stepSizeDecimalsForTicker } from '@/utils/helpers';
   
   // propd coming from the parent
   const props = defineProps<{
     updateLoading?: (arg0: string) => void,
+    allTickers: TickerType[],
     balances: AllBalancesType | null,
     selectBalance: (arg0: string) => void
     updateBalanceSelectedTicker: (arg0: BalanceType) => void
@@ -92,11 +93,10 @@
         class="p-4 bg-gray-100 rounded-lg shadow-md flex flex-col justify-between items-center cursor-pointer hover:bg-green-100"
         @click="props.selectBalance(symbol); updateBalanceWithPrice(symbol, props.balances[symbol].available);"
     >
-      
       <div class="w-full grid grid-cols-2 gap-2">
         <span class="font-semibold text-xl text-dark">{{ symbol }}</span>
         <span class="text-success font-bold text-xl text-right">
-          {{ formatNumber(props.balances[symbol].available, 5) }}
+          {{ parseFloat(props.balances[symbol].available) }}
         </span>
       </div>
       <div class="w-full grid grid-cols-2 gap-2">
@@ -109,8 +109,10 @@
         <span v-if="balancesWithPrice[ symbol ]?.balanceValue"
           class="font-semibold text-sm text-gray-900 text-right">
           <b class="text-gray-500 pr-2">$</b>{{ Math.round(balancesWithPrice[ symbol ].balanceValue) }}
-          <b class="text-red-500 text-xs" v-if="parseFloat( formatNumber(props.balances[symbol].onOrder) )">({{ 
-           formatNumber(props.balances[symbol].onOrder, 2)
+          <b class="text-red-500 text-xs"
+            v-if="parseFloat( formatNumber(props.balances[symbol].onOrder) )"
+            >({{ 
+           formatNumber(props.balances[symbol].onOrder)
           }})</b>
           
         </span>

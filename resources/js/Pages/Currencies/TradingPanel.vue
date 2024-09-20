@@ -57,7 +57,19 @@
   }
 
   const updateTradeOrder = function( newTradeSettings : TradeOrderType ) {
-    Object.assign(theTrade, newTradeSettings);
+    const defaults: TradeOrderType = {
+      symbol: selectedTickerInfo.value?.symbol ?? '',
+      quantity: 0,
+      price: price.value,
+      side: theTrade.side,
+      type: theTrade.type
+      }
+
+    theTrade.symbol = newTradeSettings.symbol ?? selectedTickerInfo.value?.symbol ?? '';
+    theTrade.quantity = newTradeSettings.quantity ?? 0;
+    theTrade.price = newTradeSettings.price?? price.value;
+    theTrade.side =  newTradeSettings.side ?? theTrade.side;
+    theTrade.type =  newTradeSettings.type?? theTrade.type;
   }
   
   const updateBalanceSelectedTicker = async function() {

@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import { computed, watch, ref, onMounted, onBeforeMount, onBeforeUnmount } from 'vue';
   import { TickerType, BalanceType, TradeOrderType } from '@/types/ticker';  
-  import { getUserOrders, placeBinanceOrder, apiCallTest, getUserBalances, cancelOrder } from '@/api/binanceApi';
+  import { getUserOrders, placeBinanceOrder, apiCallTest, getUserBalances, cancelOrder, placeBinanceOCOOrder } from '@/api/binanceApi';
   import { saveOptions } from '@/utils/localStorage-CRUD';
   // import { startWebSocket, closeWebSocket } from '@/utils/websocket-orders';
-  import { formatNumber, getTickerInfoCurrencyFromTicker } from '@/utils/helpers';
+  import { formatNumber, getTickerInfoCurrencyFromTicker, stepSizeDecimalsForTicker } from '@/utils/helpers';
 
   // Props sent from parent
   const props = defineProps<{
@@ -23,10 +23,11 @@
 
   function handleUpdateTradeOrder() {
     console.log('TODELETE: updating trade order');
-    let quantity = props.theTrade.amount / props.price;
-    const {stepSize} = props.selectedTickerInfo;
-    const quantityDecimals = stepSize.toString().split('.')[1].length;
+    let quantity = props.theTrade.amount? props.theTrade.amount / props.price : 0;
+
+    const quantityDecimals = stepSizeDecimalsForTicker(props.selectedTickerInfo.symbol, props.allTickers);
     quantity = Number(quantity.toFixed(quantityDecimals));
+    console.log('calculated quantity: '+quantity+' for ',props.selectedTickerInfo.symbol, quantityDecimals);
     const setupTradeData: TradeOrderType = {
       symbol: props.selectedTickerInfo.symbol,
       quantity,
@@ -34,6 +35,7 @@
       side: 'BUY',
       type: 'LIMIT',
     }
+    console.log('TODELETE: preparing trading at: ', setupTradeData);
     props.updateTradeOrder(setupTradeData);
     
   }
@@ -42,17 +44,50 @@
     if (!props.theTrade.symbol)
     props.theTrade.symbol = props.selectedTickerInfo.symbol;
     console.log('>>>>>>>>>>>>>>', props.selectedTickerInfo.symbol, props.theTrade);
-    placeBinanceOrder( symbol, quantity, price, side, type);
+    placeBinanceOrder( symbol, quantity, price, side, type)
+      .then(response => {
+        getOrdersForSelectedTicker( true )
+      })
 
     // console.log('TODELETE: placing a stop loss GAIN ', props.percentages.gainPrice);
     // console.log('TODELETE: placing a stop loss LOSS ', props.percentages.lossPrice);
+  }
+
+
+  // order is the response from Binance.
+  function handlePlaceOCOOrderToExitOrder(originalFilledOrder: any) {
+
+    if (originalFilledOrder.status !== 'FILLED') {
+      console.log('can\'t create the exit orders for a non filled order');
+    }
+    
+    const symbol = originalFilledOrder.symbol;
+    const side = 'SELL'; // Since you want to sell BTC for profit or loss
+    const quantity = originalFilledOrder.origQty; // alsp:  100 / 63658; // USDT / Price per BTC -> This gives you the amount of BTC you're selling
+    
+    const entryPrice = originalFilledOrder.price; // Price you bought BTC at
+    const gainPrice = entryPrice + entryPrice * props.percentages.gain/100; // % above entry price
+    const stopPrice = entryPrice - entryPrice * props.percentages.loss/100;
+    const gap = 0.5;
+    const stopLimitPrice = stopPrice - entryPrice * gap / 100;
+    
+    console.log(`From price ${entryPrice} (+${props.percentages.gain} -${props.percentages.loss}) Before placing the OCO order with , symbol: ${symbol}, side: ${side}, quantity: ${quantity}, price: ${gainPrice}, stopPrice: ${stopPrice}, stopLimitPrice: ${stopLimitPrice}`);
+    placeBinanceOCOOrder(symbol, side, quantity, entryPrice, stopPrice, stopLimitPrice)
+      .then(response => {
+        console.log('the response', response);
+        // @TODO: Attach the new order to the origina order in our own Laravel DATABASE.
+        // Update the orders list
+      //   getOrdersForSelectedTicker();
+      //  @TODO: update the balance of a single ticker.
+    }) ;
+
   }
 
   function handleCancelOrder(order: any){
     console.log('Deleting order ', order.symbol, String(order.orderId), order);
     cancelOrder( order.symbol, String(order.orderId)).then( response => {
       if (response.status === 200) console.log('All ok. Deleted', response);
-    }).finally(()=> getOrdersForSelectedTicker() );
+    }).finally(()=> getOrdersForSelectedTicker(true) );
   }
 
   // Methods
@@ -96,19 +131,20 @@
   }
 
   // WIP: for the websockets
-  function updateOrders(newOrder) {
-    console.log('>>>>> in theory a new order has arrived!! ', newOrder);
-    // orders.value = [...orders.value, newOrder];
-  }
+  // function updateOrders(newOrder) {
+  //   console.log('>>>>> in theory a new order has arrived!! ', newOrder);
+  //   // orders.value = [...orders.value, newOrder];
+  // }
 
   // Watchers
 
   // calculate quantity (asset currency) based on amount (of base currency)
   watch(
     () => props.theTrade.amount,
-    (newAmount: number) => {
-      props.theTrade.quantity = newAmount / props.price;
+    (newAmount: number | undefined) => {
+      props.theTrade.quantity = newAmount? newAmount / props.price : 0;
       saveOptions( { tradeAmount: newAmount } );
+      return newAmount;
     }
   );
 
@@ -168,11 +204,17 @@
       </div>
     </div>
 
-    <div class="trade-orders w-full flex flex-col items-center justify-center text-xsgap-3">
+    <div class="trade-orders w-full flex flex-col items-start justify-center text-xsgap-3">
       <h3 class="text-left w-full">Current Order:</h3>
-      <div class="flex flex-row justify-between ">
+      <div class="flex flex-row justify-between text-sm">
+        stuff
       </div>
-      <h3 class="text-left w-full">Binance Orders:</h3>
+      <div class="flex flex-row gap-4 items-baseline">
+        <h3 class="text-left flex-0 flex-shrink-1 flex">Binance Orders:</h3>
+        <a class="todo flex-grow-1 justify-start text-sm text-accent underline hover:no-underline cursor-pointer">
+          ignore cancelled orders
+        </a>
+      </div>
       <div class="w-full border border-gray-400">
         <table class="table-auto w-full border-collapse">
           <thead>
@@ -184,11 +226,12 @@
               <th class="text-left px-1 py-0 text-center">Quantity</th>
               <th class="text-left px-1 py-0 text-center">Price</th>
               <th class="text-left px-1 py-0 text-center">Action</th>
+              <th class="text-left px-1 py-0 text-center">Matched Order</th>
             </tr>
           </thead>
           <tbody class="text-xs">
             <tr v-for="order in orders?.slice().slice(0, 5)" 
-                :id="'order'+order.orderId"
+                :id="'order-'+order.orderId"
                 :key="order.orderId" class="border-t"
                 :class="{
                   'bg-green-100 from-green-100 to-green-300 animate-pulse': order.status === 'NEW',
@@ -220,12 +263,20 @@
                 <span class="text-gray-400 text-xs">{{ getTickerInfoCurrencyFromTicker(order.symbol, props.allTickers ).asset }}
                 </span>
               </td>
-              <td class="px-1 py-0 text-right ">
+              <td class="the-action px-1 py-0 text-center ">
                 <button @click="handleCancelOrder(order)" 
                   class="inline-flex items-center px-2 py-1 border rounded-md font-semibold text-xs text-white dark:text-gray-300 uppercase tracking-widest shadow-sm bg-red-100 hover:bg-gray-500 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition ease-in-out duration-150"
                   v-if="['NEW'].includes(order.status)"
                 >
                   ❌
+                </button>
+
+                <button 
+                  title="Place stop losses gain and loss (OCO order)"
+                  v-if="'FILLED' === order.status && order.executedQty > 0"
+                  class="text-green-500"
+                  @click="handlePlaceOCOOrderToExitOrder(order)">
+                  ➽
                 </button>
                 
               </td>

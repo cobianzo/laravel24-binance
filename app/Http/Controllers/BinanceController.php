@@ -123,7 +123,8 @@ class BinanceController extends Controller
         $api = self::getBinanceApi();
         $balances = $api->balances();
         $balances = array_filter($balances, function ($balance) {
-            return 0 !== intval( floatval( $balance['available'] ) + floatval( $balance['onOrder'] ) );
+            return 0 !== intval(ceil( floatval( $balance['available'] ) + floatval( $balance['onOrder'] ) ));
+            // return 1;
         });
         return $balances;
         // { BTC => { available: '0.00000000', onOrder: '0.00000000', btcValue, btcTotal }
@@ -215,8 +216,8 @@ class BinanceController extends Controller
         // return $request->input('symbol') . '/// ' . $request->input('orderId');
         $api = \App\Http\Controllers\BinanceController::getBinanceApi();
         $response = $api->cancel(
-            'BTCUSDT',
-            '30593458536'
+            $request->input('symbol'),
+            $request->input('orderId')
         );
         return $response;
     }
