@@ -87,10 +87,10 @@ import BalancesList from './Currencies/BalancesList.vue';
 // Inertia dependencies
 import { Head } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { TickerType, TickerPriceType, BalanceType } from '@/types/ticker';
+import { TickerType, TickerPriceType, AllBalancesType } from '@/types/ticker';
 
 // Vue dependencies
-import { onMounted, watchEffect, ref, nextTick } from 'vue';
+import { onMounted, watchEffect, ref } from 'vue';
 
 // Libraries
 import axios from 'axios';
@@ -115,7 +115,7 @@ const allTickers = ref<TickerType[]>([]);
 const favTickersReactive = ref<string[]>(props.favTickers);
 const favTickersWithPrice = ref<TickerPriceType[]|null>(null);
 // => Balances (portfolio tab)
-const balances = ref<{ [symbol: string]: BalanceType } |null>(null);
+const balances = ref<AllBalancesType |null>(null);
 // => Trading panel
 const selectedTicker = ref<string>(getOptions('selectedTicker')?? '');
 
@@ -234,8 +234,8 @@ function activateBalancesTab() {
  */
 const updateAllBalances = async () => {
     if (balances.value === null) {
-        getUserBalances().then((response: { [symbol: string]: BalanceType }) => {
-            console.log('TODELETE: Retrieve balances from backend', response);
+        getUserBalances().then((response: AllBalancesType) => {
+            console.log('TODELETE BALANCES: Retrieve balances from backend', response);
             balances.value = response;
         }).finally(() => {
     });

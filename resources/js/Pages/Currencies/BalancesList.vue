@@ -34,25 +34,25 @@
   const updateBalancesWithPrice = async (newBalances : AllBalancesType | null) => {
     if (newBalances === null) {
         balancesWithPrice.value = {};
-      } else {
-        // these calculations take a long time, so we show a loading UI
-        if (props.updateLoading) props.updateLoading('portfolio-loading');
+    } else {
+      // these calculations take a long time, so we show a loading UI
+      if (props.updateLoading) props.updateLoading('portfolio-loading');
 
-        const setOfPromises = Object.keys(newBalances).map(async (symbol) => {
-          const available = newBalances[symbol].available;
-          const availableN: number = typeof  available === 'string' ? parseFloat(available) : available;
-          
-          return updateBalanceWithPrice(symbol, availableN);
-        });
+      const setOfPromises = Object.keys(newBalances).map(async (symbol: string) => {
+        const available : string | number = newBalances[symbol]?.available;
+        const availableN: number = typeof  available === 'string' ? parseFloat(available) : available;
         
-        Promise.all(setOfPromises).finally( () => {
-          if (props.updateLoading) props.updateLoading('');
-        });
-        
-        
-        // @TODO: Now we could sort the currencies in order of balance in USDT.
-        
-      }
+        return updateBalanceWithPrice(symbol, availableN);
+      });
+      
+      Promise.all(setOfPromises).finally( () => {
+        if (props.updateLoading) props.updateLoading('');
+      });
+      
+      
+      // @TODO: Now we could sort the currencies in order of balance in USDT.
+      
+    }
   };
   watch(
     () => props.balances,

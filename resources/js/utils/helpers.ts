@@ -43,3 +43,12 @@ export function stepSizeDecimalsForTicker( symbol: string, allTickers: TickerTyp
   }
   return 0;
 }
+
+export function getPercentage(now:number, before:number, addSymbol = true) :string|number {
+  const diff = now - before;
+  const perc = (diff * 100 / before);
+  if (addSymbol) {
+    return perc.toFixed(2) + '%';
+  }
+  return perc;
+}

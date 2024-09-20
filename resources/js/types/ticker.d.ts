@@ -19,7 +19,6 @@ export interface BalanceType {
   btcTotal?: string | number,
   btcValue?:string | number,
   onOrder?: string | number,
-  price?: number
 };
 
 export interface AllBalancesType {

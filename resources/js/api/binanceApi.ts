@@ -60,8 +60,8 @@ export const placeBinanceOCOOrder = async function (
     }
 }
 
-export const getUserOrders = async function( tickerSymbol: string) {
-  const response = await axios.get(`/binance/list-orders?symbol=${tickerSymbol}`);
+export const getUserOrders = async function( tickerSymbol: string, limit: number = 0) {
+  const response = await axios.get(`/binance/list-orders?symbol=${tickerSymbol}&limit=${limit}`);
   return response.data; 
 }
 

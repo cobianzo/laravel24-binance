@@ -8,7 +8,7 @@
   // internal deps
   import { getBinancePrice } from '@/api/binanceApi';
   import { formatNumber, getTickerInfoCurrencyFromTicker } from '@/utils/helpers';
-  import { TickerType, BalanceType, TradeOrderType } from '@/types/ticker';
+  import { TickerType, AllBalancesType, TradeOrderType } from '@/types/ticker';
 
   import { getUserBalances } from '@/api/binanceApi';
   import { getOptions, saveOptions } from '@/utils/localStorage-CRUD';
@@ -18,7 +18,7 @@
   const props = defineProps<{
     selectedTicker: string,
     allTickers: TickerType[] | null,
-    balances: BalanceType[] | null,
+    balances: AllBalancesType | null,
     binancePublicKey: string,
     updateAllBalances: () => void
   }>();
@@ -26,7 +26,7 @@
   
   // Reactive data.
   // =============
-  const price = ref<number>(0);
+  const price = ref<number>(0);         // Important reactive var: the up-to-date price (with websocket)
   const loadingPrice = ref<number>(0);
 
   // balance
@@ -87,13 +87,11 @@
         tickerInfo.balanceAsset = balance?.amount ?? 0;
         selectedTickerInfo.value = tickerInfo;
         
-        // we can update also the balance in the global balance reactive var:
+        // we can update also the balance in the global balances reactive var for the buying currency:
         // @TODO: we shouldnt update it directly, but using `emit` or an update prop function
-        if (props.balances) {
-          const index = props.balances?.findIndex( (balance: BalanceType) => balance.symbol === selectedTickerInfo.value?.asset );
-          if (index !== -1) {
-            props.balances[index].amount = balance?.amount ?? 0;
-          }
+        const buyingCurrency: string = selectedTickerInfo.value?.asset ?? '';
+        if (props.balances && props.balances[buyingCurrency]) {
+          props.balances[buyingCurrency].valueUSDT = balance?.amount ?? 0;
         }
       } else {
         console.error('could not calculate balance for current buying currency, because we don\'t have ', 
@@ -307,9 +305,9 @@
         :theTrade="theTrade"
         :percentages="percentages"
         :updateTradeOrder="updateTradeOrder"
+        :price="price"
         :selectedTickerInfo="selectedTickerInfo"
         :allTickers="allTickers"
-        :price="price"
         :binancePublicKey="props.binancePublicKey"
         />
     </div>

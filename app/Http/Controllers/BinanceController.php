@@ -227,7 +227,7 @@ class BinanceController extends Controller
     {
         $args   = array_merge(['symbol' => 'BTCUSDT'], $args);
         $api    = self::getBinanceApi();
-        $orders = $api->orders($args['symbol']);
+        $orders = $api->orders($args['symbol'], $args['limit'] ?? 500);
         return array_reverse($orders);
     }
 
