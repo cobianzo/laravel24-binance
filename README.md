@@ -54,6 +54,7 @@
 ## Adding websockets to show always current price of selectedTicker.
 
 -   Doing it in Laravel, with PHP was too complex. But with js is super simple. See `openWebSocket` function.
+-   UPDATE: after installing the Binance PHP API vendor, I saw a simple way to use websockets in PHP too, using another library called \Ratchet\ . It deserves some investigation a tests creating simple sockets and checking how they work.
 
 # Explanation of the project
 

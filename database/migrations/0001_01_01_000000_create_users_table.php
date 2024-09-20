@@ -21,6 +21,8 @@ return new class extends Migration
             // My fields
             $table->string('binance_public_key')->nullable()->after('email');
             $table->string('binance_secret_key')->nullable();
+            $table->string('binance_listen_key')->nullable();
+
 
             $table->rememberToken();
             $table->timestamps();
@@ -52,5 +54,7 @@ return new class extends Migration
         Schema::dropIfExists('sessions');        
         $table->dropColumn('binance_public_key');
         $table->dropColumn('binance_secret_key');
+        $table->dropColumn('binance_listen_key');
+
     }
 };

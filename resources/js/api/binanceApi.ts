@@ -73,12 +73,17 @@ export const getUserOrders = async function( tickerSymbol: string) {
   return response.data; 
 }
 
+export const cancelOrder = async function( symbol: string, orderId: string) {
+  const response = await axios.delete(`/binance/cancel-order`, { 
+    data: { symbol: symbol, orderId: orderId } 
+  });
+  return response;
+}
+
 // JUST FOR TESTING @TODELETE:
 export const apiCallTest = async function( justOneParam: string) {
   console.log('%cBEFORE CALL /test-data', 'background:red;color:white;font-size:2rem;', justOneParam);
-  const response = await axios.post(`/test-data`, {
-    param1: justOneParam
-  });
+  const response = await axios.post('/binance/create-listen-key');
   console.log('%cAFTER CALL', 'background:red;color:white;font-size:2rem;', response.data);
   return response.data; 
 }

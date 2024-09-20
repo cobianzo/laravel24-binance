@@ -56,6 +56,9 @@
     
   }
 
+  const updateTradeOrder = function( newTradeSettings : TradeOrderType ) {
+    Object.assign(theTrade, newTradeSettings);
+  }
   
   const updateBalanceSelectedTicker = async function() {
     getUserBalances().then((response) => {
@@ -95,7 +98,7 @@
     console.log(`partial clicked`, percent, theTrade.amount, (selectedTickerInfo.value?.balanceAsset? selectedTickerInfo.value.balanceAsset : ''));
     // percentage
     if ( typeof percent === 'number') {
-      theTrade.amount = parseInt( formatNumber((selectedTickerInfo.value?.balanceAsset? selectedTickerInfo.value.balanceAsset : 0) * percent / 100, 0) );
+      theTrade.amount = parseInt( formatNumber((selectedTickerInfo.value?.balanceAsset? selectedTickerInfo.value.balanceAsset : 0) * percent / 100, 0, false) );
     } else {
       //units (eg 100 USDT)
       const units = parseInt(percent);
@@ -219,7 +222,7 @@
                 step="0.05" 
                 v-model="percentages.gain"
                 @change="saveOptions({ tradePercentages: percentages })" 
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-center w-[100px]"
+                class="percentage-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-center w-[100px]"
                 placeholder="Introduce el % de ganancia"
               />
               <div class="flex flex-col items-end justify-center pl-2 text-gray-600 text-sm text-right">
@@ -239,7 +242,7 @@
                   step="0.05" 
                   v-model="percentages.loss" 
                   @change="saveOptions({ tradePercentages: percentages })" 
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-center w-[100px]"
+                  class="percentage-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-center w-[100px]"
                   placeholder="Introduce el % de pérdida"
                 />
                 <div class="flex flex-col items-end justify-center pl-2 text-gray-600 text-sm ">
@@ -247,11 +250,6 @@
                     <span  class="text-xs text-red-600">-{{ formatNumber((theTrade.amount * (percentages.loss / 100)), 2) }}</span>
                 </div>
               </div>
-          </div>
-
-          <div class="mt-4">
-            <p><strong>Ganancia Aspirada:</strong> {{ percentages.gain }}%</p>
-            <p><strong>Pérdida Permitida:</strong> {{ percentages.loss }}%</p>
           </div>
         </div>
       </div>
@@ -291,16 +289,17 @@
         
 
       </div>
-      <div class="the-trade-action flex flex-col items-center flex-1">
-        <Trade 
-          :theTrade="theTrade"
-          :percentages="percentages"
-          :selectedTickerInfo="selectedTickerInfo"
-          :allTickers="allTickers"
-          :price="price"
-          :binancePublicKey="props.binancePublicKey"
-          />
-      </div>
+    </div>
+    <div class="the-trade-action w-full flex flex-col items-center flex-1">
+      <Trade 
+        :theTrade="theTrade"
+        :percentages="percentages"
+        :updateTradeOrder="updateTradeOrder"
+        :selectedTickerInfo="selectedTickerInfo"
+        :allTickers="allTickers"
+        :price="price"
+        :binancePublicKey="props.binancePublicKey"
+        />
     </div>
   </div>
 </template>
@@ -308,5 +307,8 @@
 <style scoped>
 .the-columns-container > div {
   min-width: 200px;
+}
+.percentage-input {
+  max-width: 100px;
 }
 </style>

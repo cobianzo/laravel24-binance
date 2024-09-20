@@ -15,7 +15,9 @@ class BinanceController extends Controller
     const API_BASE      = 'https://api.binance.com/api/';
     const API_BASE_TEST = 'https://testnet.binance.vision/api/';
 
-    public static function getBinanceApi() {
+    const WEBSOCKET_ORDERS = 'https://api.binance.com/api/v3/userDataStream';
+
+    public static function getBinanceApi() : \Binance\API {
         return new API(self::get_public_key(), self::get_secret_key());
     }
     public static function get_api_base() {
@@ -206,20 +208,33 @@ class BinanceController extends Controller
         return $response;
     }
 
+    
+    // Endpoint: DELETE /binance/cancel-order
+    public function cancelOrder(\Illuminate\Http\Request $request)
+    {
+        // return $request->input('symbol') . '/// ' . $request->input('orderId');
+        $api = \App\Http\Controllers\BinanceController::getBinanceApi();
+        $response = $api->cancel(
+            'BTCUSDT',
+            '30593458536'
+        );
+        return $response;
+    }
+
     // Endpoint: PUT /binance/list-orders
     public static function getUserOrders( $args )
     {
         $args   = array_merge(['symbol' => 'BTCUSDT'], $args);
         $api    = self::getBinanceApi();
         $orders = $api->orders($args['symbol']);
-        return $orders;
+        return array_reverse($orders);
     }
 
 
     // HELPER: Función estática que gestiona las solicitudes a la API de Binance.
     // Works well, but with the "jaggedsoft/php-binance-api": we dont need it.
     // Usage: $response = self::sendBinanceRequest('GET', 'v3/allOrders', ['symbol' => 'BTCUSDT'], Auth::user());
-    /** 
+    
     public static function sendBinanceRequest($method, $url, $body = [], $user)
     {
         $timestamp = round(microtime(true) * 1000);
@@ -241,8 +256,55 @@ class BinanceController extends Controller
 
         return $response;
     }
-    */
 
+
+    // websokets. I could not make it work
+    /* public static function createListenKey() {
+        
+
+        $response = self::sendBinanceRequest('POST',
+            'v1/userDataStream', [], Auth::user());
+
+        return $response->json();
+        $listenKey = $response['listenKey'];
+        $user->binance_listen_key = $listenKey;
+        $user->save();
+        
+        return $listenKey;;  // Esto devolverá el Listen Key al frontend
+    }
+
+    // Debes actualizar la listen key cada 60 minutos para que la conexión siga viva. 
+    // @TODO: crear un job que se ejecute de manera periódica.
+    public function keepAliveListenKey() {
+        $user = auth()->user();
+        
+        if ($user->binance_listen_key) {
+            // Actualizar la listen key
+            $response = Http::withHeaders([
+                'X-MBX-APIKEY' => $user->binance_public_key
+            ])->put( self::WEBSOCKET_ORDERS, [
+                'listenKey' => $user->binance_listen_key
+            ]);
+        }
+    }
+
+    public function closeListenKey() {
+        $user = Auth::user();  // Usuario autenticado
+
+        $listenKey = $user->binance_listen_key;  // Guarda el listenKey en tu modelo de usuario
+
+        $response = Http::withHeaders([
+            'X-MBX-APIKEY' => $user->binance_public_key,
+        ])->delete( self::WEBSOCKET_ORDERS, [
+            'listenKey' => $listenKey,
+        ]);
+
+        // Limpiar la listen key en la base de datos
+        $user->binance_listen_key = null;
+        $user->save();
+
+        return $response->json();
+    } */
 }
 
 

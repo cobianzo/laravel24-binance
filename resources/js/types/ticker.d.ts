@@ -28,7 +28,7 @@ export interface AllBalancesType {
 
 export interface TradeOrderType {
   symbol: string;
-  amount: number;
+  amount?: number;
   quantity: number; // quantity depends on amount
   price: number;
   side: 'BUY' | 'SELL';
