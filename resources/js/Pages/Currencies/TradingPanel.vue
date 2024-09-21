@@ -51,11 +51,7 @@
   // METHODS and functions
   // ============
 
-  const updateBinancePrice = async function() {
-    return; // todelete
-    
-  }
-
+  
   const updateTradeOrder = function( newTradeSettings : TradeOrderType ) {
     const defaults: TradeOrderType = {
       symbol: selectedTickerInfo.value?.symbol ?? '',
@@ -147,7 +143,6 @@
   
   
   onMounted(() => {
-    updateBinancePrice();
     openWebSocket(props.selectedTicker, (newPrice: number) => price.value = newPrice );
     updateBalanceSelectedTicker();
   });
@@ -175,7 +170,6 @@
         openWebSocket(newTicker.toLowerCase(), (newPrice: number) => {
           price.value = newPrice;
         });
-        // updateBinancePrice();
       }
 
       // update the selectedTickerInfo
@@ -204,7 +198,6 @@
         <p class="text-3xl text-accent transition-opacity"
           :class="{ 'opacity-20': loadingPrice }"
           @click="price = 100"
-          @dblclick="updateBinancePrice()"
           >{{
             formatNumber(price,4)
         }}</p>

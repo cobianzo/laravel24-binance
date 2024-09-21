@@ -33,3 +33,33 @@ export interface TradeOrderType {
   side: 'BUY' | 'SELL';
   type: 'LIMIT' | 'MARKET';
 }
+
+// @TODO: not ticker anymore, rename the file or create a new one
+export interface OrderBinanceType {
+  clientOrderId: string,
+  cummulativeQuoteQty: string,
+  executedQty: string,
+  icebergQty: string,
+  isWorking: boolean,
+  orderId: number
+  orderListId: number
+  origQty: string,
+  origQuoteOrderQty: string,
+  price: string
+  selfTradePreventionMode: string
+  side: string,
+  status: string,
+  stopPrice: string,
+  symbol: string,
+  time: number,
+  timeInForce: string,
+  type: string,
+  updateTime: number,
+  workingTime: number,
+}
+
+export interface MatchedOrdersType {
+  originalEntryOrder: string|null,
+  closingGainOrder: string|null,
+  closingLossOrder: string|null,
+}

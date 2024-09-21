@@ -6,11 +6,12 @@
   import Orders from './Orders.vue';
 
   // types, api, localstorage, helpers
-  import { TickerType, BalanceType, TradeOrderType } from '@/types/ticker';  
+  import { TickerType, MatchedOrdersType, TradeOrderType } from '@/types/ticker';  
   import { getUserOrders, placeBinanceOrder, apiCallTest, getUserBalances, cancelOrder, placeBinanceOCOOrder } from '@/api/binanceApi';
   import { saveOptions } from '@/utils/localStorage-CRUD';
   // import { startWebSocket, closeWebSocket } from '@/utils/websocket-orders';
   import { formatNumber, getTickerInfoCurrencyFromTicker, stepSizeDecimalsForTicker } from '@/utils/helpers';
+  import axios from 'axios';
   
 
   // Props sent from parent
@@ -27,6 +28,58 @@
 
   // Reactive vars
   const orders = ref<Object[]|null>(null);
+
+  // not in use. If deleted, delete all references
+  const ordersInfoInDB = ref<{ order_id: string, order_data: Object, parent_order_id: string|null }[]>([])
+
+  
+  const matchedOrders = ref<MatchedOrdersType[]>([]);
+  const currentMatchingOrders = ref<MatchedOrdersType>({ originalEntryOrder: null, closingGainOrder: null, closingLossOrder: null });
+  const clearCurrentMatchingOrders = () => currentMatchingOrders.value = { originalEntryOrder: null, closingGainOrder: null, closingLossOrder: null };
+  
+  const selectCurrentMatchingOrder = function(orderId:string, orderType: string, toggle: boolean = true) {
+    const isGain = ['gain', 'LIMIT_MAKER'].includes(orderType);
+    const isLoss = ['loss', 'STOP_LOSS_LIMIT'].includes(orderType);
+    const isOpen = !isGain && !isLoss; // ['NEW', 'PARTIALLY_FILLED']
+    let property : 'originalEntryOrder' | 'closingGainOrder' | 'closingLossOrder';
+    property = 'originalEntryOrder'; 
+    if ( isGain ) {
+      property = 'closingGainOrder';
+    } else 
+    if ( isLoss ) {
+      property = 'closingLossOrder';
+    }
+    if ( toggle && currentMatchingOrders.value[property] === orderId ) {
+      currentMatchingOrders.value[property] = null;
+    } else {
+      currentMatchingOrders.value[property] = orderId;
+    }
+  }
+  const saveCurrentMatchingOrders = function() {
+    // validatin. If there are other in the matchedorders, we need to clear them.
+    let cleanMatchedOrders = [...matchedOrders.value];
+    const interf = ['originalEntryOrder', 'closingGainOrder', 'closingLossOrder'];
+    const currentMatchingArConcatString: string = currentMatchingOrders.value.originalEntryOrder + '|' + currentMatchingOrders.value.closingGainOrder + '|' + currentMatchingOrders.value.closingLossOrder;
+    cleanMatchedOrders = cleanMatchedOrders.filter( matchedSingle => {
+      // if any of the three orders is in any of the three orders of currentMatchingOrders.value, we remove it
+      if ( currentMatchingArConcatString.includes(matchedSingle.originalEntryOrder) || currentMatchingArConcatString.includes(matchedSingle.closingGainOrder) || currentMatchingArConcatString.includes(matchedSingle.closingLossOrder) ) {
+        return false;
+      } else {
+        return true;  
+      }
+    });
+    cleanMatchedOrders.push(currentMatchingOrders.value);
+    matchedOrders.value = cleanMatchedOrders;
+    clearCurrentMatchingOrders();
+  }
+
+  const matchingOrdersModel = {
+    matchedOrders,
+    currentMatchingOrders,
+    clearCurrentMatchingOrders,
+    selectCurrentMatchingOrder,
+    saveCurrentMatchingOrders
+  }
 
   function handleUpdateTradeOrder() {
     console.log('TODELETE: updating trade order');
@@ -99,8 +152,18 @@
       // };
       
     }
-  
+    updateOrdersFromDB();
   }
+
+
+  // Extended Order info from the DB - relationship between cover OCO orders and Opened buy orders.
+  const updateOrdersFromDB = async () => {
+    await axios.get('/api/orders?limit=15').then(response => {
+      console.log('TODELETE: updated OrdersDB: ', response);
+      ordersInfoInDB.value = response.data
+    });
+  }
+
 
   // WIP: for the websockets
   // function updateOrders(newOrder) {
@@ -177,8 +240,12 @@
     </div>
 
     <div class="trade-orders w-full flex flex-col items-start justify-center text-xsgap-3">
+      TODELETE DEBUG here: {{ matchedOrders }} <br/>
+      TODELETE DEBUG here: {{ currentMatchingOrders }}
       <Orders
         :orders="orders"
+        :ordersInfoInDB="ordersInfoInDB"
+        :matchingOrdersModel="matchingOrdersModel"
         :allTickers="props.allTickers"
         :percentages="props.percentages"
         :price="props.price"

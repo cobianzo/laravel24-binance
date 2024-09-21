@@ -179,7 +179,7 @@ class BinanceController extends Controller
     }
 
     // Método para colocar una orden OCO
-    public function placeOCOOrder(Request $request)
+    public function placeOCOOrder(\Illuminate\Http\Request $request)
     {
         $user = Auth::user(); // Obtener el usuario autenticado
 
@@ -192,20 +192,17 @@ class BinanceController extends Controller
         $stopLimitPrice   = $request->input('stopLimitPrice'); // Precio límite de la orden stop
         $stopLimitTimeInForce = 'GTC'; // Good Till Canceled, podría configurarse dinámicamente
 
-        // Construcción del cuerpo de la solicitud
-        $body = [
-            'symbol'          => $symbol,
-            'side'            => $side,
-            'quantity'        => $quantity,
-            'price'           => $price,
-            'stopPrice'       => $stopPrice,
-            'stopLimitPrice'  => $stopLimitPrice,
-            'stopLimitTimeInForce' => $stopLimitTimeInForce,
-        ];
-
-        // Llamada a la función estática que interactúa con la API de Binance
-        $response = self::sendBinanceRequest('POST', 'v3/order/oco', $body, $user);
-
+        $api      = self::getBinanceApi();        
+        $response =$api->OCOorder(
+            $side, 
+            $symbol,
+            $quantity,
+            $price,
+            $stopPrice,
+            [
+                'stopLimitPrice'       => $stopLimitPrice,
+            ],
+            false);
         return $response;
     }
 

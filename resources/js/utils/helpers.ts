@@ -16,7 +16,8 @@ export function formatNumber(value: number | string | null, maxDecimals: number 
   return locale ? parseFloat(formattedString).toLocaleString('en-US') : parseFloat(formattedString).toString();
 }
 
-export function getTickerInfoCurrencyFromTicker( symbol: string, allTickers : TickerType[] | null ): TickerType | null {
+export function getTickerInfoCurrencyFromTicker( symbol: string | null, allTickers : TickerType[] | null ): TickerType | null {
+  if (! symbol ) return null;
   const tickerInfo = allTickers !== null ? 
         allTickers.find( ticker => ticker.symbol === symbol ) 
         : null;;
@@ -36,12 +37,23 @@ export function countDecimals(number: number) {
 }
 
 
+
+// returns 0.00001
 export function stepSizeDecimalsForTicker( symbol: string, allTickers: TickerType[] ) {
   const find = allTickers.find( t => t.symbol === symbol );
   if (find?.stepSize) {
     return countDecimals(find.stepSize);
   }
   return 0;
+}
+
+export function formatPriceToStepSize( price: number | string, symbol: string, allTickers : TickerType[]) : number {
+  const priceString : string =  typeof price === 'number' ? price.toString() : price;
+  let priceFloat : number = parseFloat(priceString);
+  const decimals = stepSizeDecimalsForTicker( symbol, allTickers );
+  if (!decimals) return priceFloat;
+
+  return Number(priceFloat.toFixed(decimals));
 }
 
 export function getPercentage(now:number, before:number, addSymbol = true) :string|number {

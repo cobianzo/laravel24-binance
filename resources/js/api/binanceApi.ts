@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { TickerPriceType } from '@/types/ticker';
+import { TickerType, OrderBinanceType } from '@/types/ticker';  
 
 // Función para obtener el precio de una moneda específica
 // returns { symbol: BTCUSTD, price: 56452.0004344}
@@ -34,10 +34,10 @@ export const placeBinanceOrder = async( symbol: string, quantity: number, price:
 export const placeBinanceOCOOrder = async function (
   symbol: string,
   side: 'BUY' | 'SELL',
-  quantity: number,
-  price: number,        // price of sell to gain
-  stopPrice: number,    // trigger to set the next line
-  stopLimitPrice: number// price to seel to lose
+  quantity: string,
+  price: string,        // price of sell to gain
+  stopPrice: string,    // trigger to set the next line
+  stopLimitPrice: string// price to seel to lose
 ) {
     try {
       console.log('OCO Order placeing... BEFORE successfully:', symbol, side, quantity, price, stopPrice, stopLimitPrice);
@@ -53,6 +53,7 @@ export const placeBinanceOCOOrder = async function (
 
       // Si la orden es exitosa, imprime los resultados
       console.log('OCO Order placed successfully:', response.data);
+      return response.data;
     } catch (error) {
       // Manejar errores
       console.error('Error placing OCO order:', error);
@@ -60,7 +61,7 @@ export const placeBinanceOCOOrder = async function (
     }
 }
 
-export const getUserOrders = async function( tickerSymbol: string, limit: number = 0) {
+export const getUserOrders = async function( tickerSymbol: string, limit: number = 0): Promise<OrderBinanceType[]> {
   const response = await axios.get(`/binance/list-orders?symbol=${tickerSymbol}&limit=${limit}`);
   return response.data; 
 }
