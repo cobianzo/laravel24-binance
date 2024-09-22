@@ -11,6 +11,7 @@ type UserOptions = {
   selectedTicker?: string;
   tradePercentages?: { gain: number, loss: number };
   tradeAmount?: number;
+  hideCanceled?: boolean;
   // Aquí puedes añadir más opciones según sea necesario
 };
 

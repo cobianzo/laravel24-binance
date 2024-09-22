@@ -56,9 +56,10 @@ export function formatPriceToStepSize( price: number | string, symbol: string, a
   return Number(priceFloat.toFixed(decimals));
 }
 
-export function getPercentage(now:number, before:number, addSymbol = true) :string|number {
-  const diff = now - before;
-  const perc = (diff * 100 / before);
+export function getPercentage(now:number | string, before:number | string, addSymbol = true) :string|number {
+  const beforeAsFloat = parseFloat(before.toString());
+  const diff = parseFloat(now.toString()) - beforeAsFloat;
+  const perc = (diff * 100 / beforeAsFloat);
   if (addSymbol) {
     return perc.toFixed(2) + '%';
   }

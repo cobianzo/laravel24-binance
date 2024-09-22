@@ -1,12 +1,13 @@
 <script setup lang="ts">
   // vue
-  import { computed, watch, ref, onMounted, onBeforeMount, onBeforeUnmount } from 'vue';
-
+  import { computed, watch, Ref, ref, onMounted, onBeforeMount, onBeforeUnmount } from 'vue';
+  
   // Child components
   import Orders from './Orders.vue';
 
   // types, api, localstorage, helpers
-  import { TickerType, MatchedOrdersType, TradeOrderType } from '@/types/ticker';  
+  import { TickerType, TradeOrderType, TripleOrderType } from '@/types/ticker';  
+
   import { getUserOrders, placeBinanceOrder, apiCallTest, getUserBalances, cancelOrder, placeBinanceOCOOrder } from '@/api/binanceApi';
   import { saveOptions } from '@/utils/localStorage-CRUD';
   // import { startWebSocket, closeWebSocket } from '@/utils/websocket-orders';
@@ -28,19 +29,19 @@
 
   // Reactive vars
   const orders = ref<Object[]|null>(null);
-
+  
   // not in use. If deleted, delete all references
   const ordersInfoInDB = ref<{ order_id: string, order_data: Object, parent_order_id: string|null }[]>([])
 
   
-  const matchedOrders = ref<MatchedOrdersType[]>([]);
-  const currentMatchingOrders = ref<MatchedOrdersType>({ originalEntryOrder: null, closingGainOrder: null, closingLossOrder: null });
-  const clearCurrentMatchingOrders = () => currentMatchingOrders.value = { originalEntryOrder: null, closingGainOrder: null, closingLossOrder: null };
+  const tradesGroupedInTripleOrders = ref<TripleOrderType[]>([]);
+  const currentTripleOrder = ref<TripleOrderType>({ originalEntryOrder: null, closingGainOrder: null, closingLossOrder: null });
+  const clearCurrentTripleOrder = () => currentTripleOrder.value = { originalEntryOrder: null, closingGainOrder: null, closingLossOrder: null };
   
-  const selectCurrentMatchingOrder = function(orderId:string, orderType: string, toggle: boolean = true) {
+  const selectCurrentTripleOrder = function(orderId:string, orderType: string, toggle: boolean = true) {
     const isGain = ['gain', 'LIMIT_MAKER'].includes(orderType);
     const isLoss = ['loss', 'STOP_LOSS_LIMIT'].includes(orderType);
-    const isOpen = !isGain && !isLoss; // ['NEW', 'PARTIALLY_FILLED']
+    // const isOpen = !isGain && !isLoss; // ['NEW', 'PARTIALLY_FILLED']
     let property : 'originalEntryOrder' | 'closingGainOrder' | 'closingLossOrder';
     property = 'originalEntryOrder'; 
     if ( isGain ) {
@@ -49,36 +50,50 @@
     if ( isLoss ) {
       property = 'closingLossOrder';
     }
-    if ( toggle && currentMatchingOrders.value[property] === orderId ) {
-      currentMatchingOrders.value[property] = null;
+    if ( toggle && currentTripleOrder.value[property] === orderId ) {
+      currentTripleOrder.value[property] = null;
     } else {
-      currentMatchingOrders.value[property] = orderId;
+      currentTripleOrder.value[property] = orderId;
     }
   }
-  const saveCurrentMatchingOrders = function() {
+  const saveCurrentTripleOrder = function() {
     // validatin. If there are other in the matchedorders, we need to clear them.
-    let cleanMatchedOrders = [...matchedOrders.value];
-    const interf = ['originalEntryOrder', 'closingGainOrder', 'closingLossOrder'];
-    const currentMatchingArConcatString: string = currentMatchingOrders.value.originalEntryOrder + '|' + currentMatchingOrders.value.closingGainOrder + '|' + currentMatchingOrders.value.closingLossOrder;
+    let cleanMatchedOrders = [...tradesGroupedInTripleOrders.value];
+    const currentMatchingArConcatString: string = currentTripleOrder.value.originalEntryOrder + '|' + currentTripleOrder.value.closingGainOrder + '|' + currentTripleOrder.value.closingLossOrder;
     cleanMatchedOrders = cleanMatchedOrders.filter( matchedSingle => {
-      // if any of the three orders is in any of the three orders of currentMatchingOrders.value, we remove it
+      // if any of the three orders is in any of the three orders of currentTripleOrder.value, we remove it
       if ( currentMatchingArConcatString.includes(matchedSingle.originalEntryOrder) || currentMatchingArConcatString.includes(matchedSingle.closingGainOrder) || currentMatchingArConcatString.includes(matchedSingle.closingLossOrder) ) {
         return false;
       } else {
         return true;  
       }
     });
-    cleanMatchedOrders.push(currentMatchingOrders.value);
-    matchedOrders.value = cleanMatchedOrders;
-    clearCurrentMatchingOrders();
+    cleanMatchedOrders.push(currentTripleOrder.value);
+    tradesGroupedInTripleOrders.value = cleanMatchedOrders;
+    clearCurrentTripleOrder();
+  }
+  const deleteTradeContainingOrder = function(orderId: string) {
+    tradesGroupedInTripleOrders.value = tradesGroupedInTripleOrders.value.filter( matchedSingle => {
+      return ! Object.values(matchedSingle).includes(orderId);
+    });
   }
 
-  const matchingOrdersModel = {
-    matchedOrders,
-    currentMatchingOrders,
-    clearCurrentMatchingOrders,
-    selectCurrentMatchingOrder,
-    saveCurrentMatchingOrders
+  type TripleOrdersAPI = { 
+    tradesGroupedInTripleOrders: Ref<TripleOrderType[]>,
+    currentTripleOrder: Ref<TripleOrderType>,
+    clearCurrentTripleOrder: () => void,
+    selectCurrentTripleOrder: (orderId: string, orderType: string, toggle?: boolean) => void,
+    saveCurrentTripleOrder: () => void,
+    deleteTradeContainingOrder: () => void,
+  }
+
+  const matchingOrdersAPI: TripleOrdersAPI = {
+    tradesGroupedInTripleOrders,
+    currentTripleOrder,
+    clearCurrentTripleOrder,
+    selectCurrentTripleOrder,
+    saveCurrentTripleOrder,
+    deleteTradeContainingOrder
   }
 
   function handleUpdateTradeOrder() {
@@ -208,6 +223,7 @@
 
     <div class="trade-data mt-5 flex flex-col items-start justify-center w-full text-xs gap-3">
       <div class="flex flex-row gap-3 justify-between w-full">
+        <button @click="updateMiTest">TEST TODELTEE</button>
         <button class="inline-flexitems-center px-4 py-2 border border-transparent text-center shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex-none"
           @click="handleUpdateTradeOrder">update</button>
         
@@ -240,12 +256,10 @@
     </div>
 
     <div class="trade-orders w-full flex flex-col items-start justify-center text-xsgap-3">
-      TODELETE DEBUG here: {{ matchedOrders }} <br/>
-      TODELETE DEBUG here: {{ currentMatchingOrders }}
       <Orders
         :orders="orders"
         :ordersInfoInDB="ordersInfoInDB"
-        :matchingOrdersModel="matchingOrdersModel"
+        :matchingOrdersAPI="matchingOrdersAPI"
         :allTickers="props.allTickers"
         :percentages="props.percentages"
         :price="props.price"

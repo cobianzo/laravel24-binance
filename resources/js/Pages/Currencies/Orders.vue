@@ -1,10 +1,12 @@
 <script setup lang="ts">
 // Vue
-import { ref } from 'vue';
-import { TickerType, OrderBinanceType, MatchedOrdersType } from '@/types/ticker';  
+import { ref, Ref, computed, watch } from 'vue';
+import { TickerType, OrderBinanceType, TripleOrderType } from '@/types/ticker';  
 import { getTickerInfoCurrencyFromTicker, getPercentage, formatNumber, formatPriceToStepSize } from '@/utils/helpers'
 import { cancelOrder, placeBinanceOCOOrder } from '@/api/binanceApi';
-import axios from 'axios';
+import {numberOrdersMatchingSelected } from '@/utils/tradeTripleOrder-utils';
+import { saveOptions, getOptions } from '@/utils/localStorage-CRUD';
+import MatchTradesColumn from './MatchTradesColumn.vue';
 
 /**
  * Logic in here:
@@ -18,7 +20,16 @@ import axios from 'axios';
 const props = defineProps<{
   orders: OrderBinanceType[]|null,
   ordersInfoInDB: { order_id: string, order_data: Object, parent_order_id: string|null }[],
-  matchingOrdersModel: { matchedOrders: MatchedOrdersType[], currentMatchingOrders: MatchedOrdersType, clearCurrentMatchingOrders: any, selectCurrentMatchingOrder: any, saveCurrentMatchingOrders: any },
+  matchingOrdersAPI: { 
+    // the model (reactive data)
+    tradesGroupedInTripleOrders: TripleOrderType[], 
+    // methods
+    currentTripleOrder: Ref<TripleOrderType>,
+    clearCurrentTripleOrder: any,
+    selectCurrentTripleOrder: any,
+    saveCurrentTripleOrder: any,
+    deleteTradeContainingOrder: any
+  },
   allTickers: TickerType[] | null,
   price: number,
   percentages: { gain: number, gainPrice: number, loss: number, lossPrice: number },
@@ -26,8 +37,15 @@ const props = defineProps<{
   syncOrdersForSelectedTicker: (arg0: boolean) => void,
 }>()
 
+// Reactive variables
 // Filled orders that we want to monitorize if we are winninng or losing
 const followedUpOrders = ref<string[]>([]);
+const options = ref<{
+  hideCanceled: boolean
+}>({
+  hideCanceled: getOptions( 'hideCanceled' )
+});
+
 
 
 function handleCancelOrder(order: OrderBinanceType){
@@ -71,33 +89,6 @@ function handlePlaceOCOOrderToExitOrder(originalFilledOrder: OrderBinanceType) {
   }) ;
 }
 
-// helpers matching orders
-const orderIsSelectedForMatching : (orderId: string|number) => string  = (orderId) => {
-  const orderIdString = orderId.toString();
-  if ( orderIdString === props.matchingOrdersModel.currentMatchingOrders.value.originalEntryOrder ) {
-    return 'originalEntryOrder';
-  }
-  if ( orderIdString === props.matchingOrdersModel.currentMatchingOrders.value.closingGainOrder ) {
-    return 'closingGainOrder';
-  }
-  if ( orderIdString === props.matchingOrdersModel.currentMatchingOrders.value.closingLossOrder ) {
-    return 'closingLossOrder';
-  }
-  return '';
-}
-const numberOrdersMatchingSelected = function() : number {
-  let count = 0;
-  
-  count += props.matchingOrdersModel.currentMatchingOrders.value.originalEntryOrder ? 1 : 0;
-  count += props.matchingOrdersModel.currentMatchingOrders.value.closingGainOrder ? 1 : 0;
-  count += props.matchingOrdersModel.currentMatchingOrders.value.closingLossOrder ? 1 : 0;
-  return count;
-}
-
-function handleMatchOrders(orderData: OrderBinanceType) {
-  props.matchingOrdersModel.selectCurrentMatchingOrder(orderData.orderId.toString(), orderData.type);
-}
-
   
 // checks if an order is on the followeup list.
 const orderFollowed: (orderId: string|number) => boolean = (orderId) => followedUpOrders.value.includes(orderId.toString());
@@ -114,6 +105,7 @@ function handleFollowUpOrder(order: OrderBinanceType) {
   }
 }
 
+
 </script>
 
 <template>
@@ -123,27 +115,39 @@ function handleFollowUpOrder(order: OrderBinanceType) {
   </div>
   <div class="flex flex-row gap-4 items-baseline">
     <h3 class="text-left flex-0 flex-shrink-1 flex">Binance Orders for&nbsp;<span class="text-accent">{{ props.selectedTickerInfo?.symbol }}</span>:</h3>
-    <a class="todo flex-grow-1 justify-start text-sm text-accent underline hover:no-underline cursor-pointer">
-      ignore cancelled orders
+    <a class="todo flex-grow-1 justify-start text-sm text-accent underline hover:no-underline cursor-pointer"
+        @click="() => {
+          const newVal = !options.hideCanceled; 
+          options.hideCanceled = newVal; 
+          saveOptions( { hideCanceled : newVal } );
+        }"
+    >
+    {{  options.hideCanceled ? 'show also canceled orders' : 'ignore canceled orders' }}
     </a>
   </div>
 
   <div class="matching-buttons w-full flex flex-row justify-end gap-4">
+    
     <button 
-      v-if="numberOrdersMatchingSelected() > 1"
+      v-if="numberOrdersMatchingSelected(props.matchingOrdersAPI.currentTripleOrder.value) >= 2"
       class="text-sm bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded" 
-      @click="props.matchingOrdersModel.saveCurrentMatchingOrders()">
+      @click="props.matchingOrdersAPI.saveCurrentTripleOrder()">
         Save matching orders as a Trade
     </button>
     <button 
-      v-if="numberOrdersMatchingSelected() > 1"
+      v-if="numberOrdersMatchingSelected(props.matchingOrdersAPI.currentTripleOrder.value) > 0"
       class="text-sm bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" 
-      @click="props.matchingOrdersModel.clearCurrentMatchingOrders()">
-        Cancel matching orders
+      @click="props.matchingOrdersAPI.clearCurrentTripleOrder()">
+        Cancel matching orders as a Trade
     </button>
   </div>
   <div class="w-full border border-gray-400">
-    <table class="table-auto w-full border-collapse">
+    <table 
+      class="table-auto w-full border-collapse"
+      :class="{
+        'hide-canceled' : options.hideCanceled
+      }"
+      >
       <thead>
         <tr class="bg-gray-200 text-sm">
           <th class="text-left px-1 py-0">Date</th>
@@ -160,9 +164,12 @@ function handleFollowUpOrder(order: OrderBinanceType) {
         <tr v-for="order in props.orders" 
             :id="'order-'+order.orderId"
             :key="order.orderId" class="border-t"
+            
+            
             :class="{
               'bg-green-100 from-green-100 to-green-300 animate-pulse': order.status === 'NEW',
-              'text-gray-400': order.status === 'CANCELED'
+              'text-gray-400': order.status === 'CANCELED',
+              [`status-${order.status.toLowerCase()}`]: true
             }"
         >
           <td class="px-1 py-0">{{ new Date(order.time).toLocaleString() }}</td>
@@ -191,7 +198,7 @@ function handleFollowUpOrder(order: OrderBinanceType) {
             class="the-price px-1 py-0 text-right ">
             <span class="text-accent text-sm">{{ formatNumber(order.price, 2) }}</span>
             <span class="text-gray-400 text-xs">
-              {{ getTickerInfoCurrencyFromTicker(order.symbol, props.allTickers ).asset }}
+              {{ getTickerInfoCurrencyFromTicker(order.symbol, props.allTickers )?.asset }}
             </span>
             <span v-if="order.type === 'LIMIT_MAKER' && order.status === 'NEW'"
               class="text-gray-400 text-xs">
@@ -207,11 +214,11 @@ function handleFollowUpOrder(order: OrderBinanceType) {
             </span>
             <span class="text-accent text-sm"
               :class="{
-                'text-green-600': order.price < props.price,
-                'text-red-600': order.price > props.price,
+                'text-green-600': parseFloat(order.price) < props.price,
+                'text-red-600': parseFloat(order.price) > props.price,
               }"
             >
-              {{ formatNumber( (props.price - order.price) * parseFloat(getPercentage(order.price, props.price, false)/ 100), 2) }}
+              {{ formatNumber( (props.price - parseFloat(order.price)) * parseFloat(getPercentage(order.price, props.price, false).toString())/ 100, 2) }}
             </span>
           </td>
 
@@ -241,13 +248,10 @@ function handleFollowUpOrder(order: OrderBinanceType) {
             </button>
           </td>
           <td class="the-matching-order px-1 py-0 text-center ">
-            <button 
-              title="Match order open-closing trade"
-              class="text-accent ml-5 text-lg"
-              :class="{'animate-pulse': Object.values(props.matchingOrdersModel.currentMatchingOrders.value).some( (value) => value === order.orderId ) }"
-              @click="handleMatchOrders(order)">
-              🔗 link {{  orderIsSelectedForMatching(order.orderId) ? 'sel' : ''  }}
-            </button>
+            <MatchTradesColumn 
+              :order="order"
+              :matchingOrdersAPI="matchingOrdersAPI"
+            />
           </td>
         </tr>
       </tbody>
@@ -257,4 +261,8 @@ function handleFollowUpOrder(order: OrderBinanceType) {
 </template>
 
 <style scoped>
+  table.hide-canceled tr.status-canceled {
+    animation: hide 0.5s ease-out forwards;
+  }
+  @keyframes hide { 0% { opacity: 1; } 100% { opacity: 0; display: none; } }
 </style>

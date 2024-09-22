@@ -58,7 +58,7 @@ export interface OrderBinanceType {
   workingTime: number,
 }
 
-export interface MatchedOrdersType {
+export interface TripleOrderType {
   originalEntryOrder: string|null,
   closingGainOrder: string|null,
   closingLossOrder: string|null,
