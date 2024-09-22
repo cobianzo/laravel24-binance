@@ -9,10 +9,10 @@
   import { OrderBinanceType, TickerType, TradeOrderType, TripleOrderType, TripleOrdersAPIType } from '@/types/ticker';  
 
   import { getUserOrders, placeBinanceOrder, apiCallTest, getUserBalances } from '@/api/binanceApi';
-  import { saveOptions } from '@/utils/localStorage-CRUD';
+  import { getOptions, saveOptions } from '@/utils/localStorage-CRUD';
   // import { startWebSocket, closeWebSocket } from '@/utils/websocket-orders';
   import { formatNumber, stepSizeDecimalsForTicker } from '@/utils/helpers';
-  import { saveTradeGroupsForSymbol, loadTradeGroupsForSymbol } from '@/utils/tradeTripleOrder-utils';
+  import { saveTradeGroupsInDBForSymbol, loadTradeGroupsFromDBForSymbol } from '@/utils/tradeTripleOrder-utils';
   
 
   // Props sent from parent
@@ -74,7 +74,7 @@
     tradesGroupedInTripleOrders.value = cleanMatchedOrders;
 
     // save into the DB and clear the temporary current linking
-    saveTradeGroupsForSymbol( props.selectedTickerInfo?.symbol, cleanMatchedOrders);
+    saveTradeGroupsInDBForSymbol( props.selectedTickerInfo?.symbol, cleanMatchedOrders);
     clearCurrentTripleOrder();
   }
   const deleteTradeContainingOrder = function(orderId: string) {
@@ -82,7 +82,7 @@
       return ! Object.values(matchedSingle).includes(orderId);
     });
     tradesGroupedInTripleOrders.value = newArray;
-    saveTradeGroupsForSymbol( props.selectedTickerInfo?.symbol, newArray);
+    saveTradeGroupsInDBForSymbol( props.selectedTickerInfo?.symbol, newArray);
   }
 
   const tripleOrdersAPI: TripleOrdersAPIType = {
@@ -131,7 +131,7 @@
   
 
   // Methods
-  const syncOrdersForSelectedTicker = async( reset:boolean = false) => {
+  const syncOrdersForSelectedTicker = async( reset:boolean = true) => {
     console.log('%cTODEL Trying to retrieve orders for the first time for ', 'color:orange',props.selectedTickerInfo?.symbol);
     if ( orders.value !== null && reset === false ) {
       console.log( 'Orders are not null, It was loaded before. ');
@@ -142,7 +142,8 @@
       return;
     }
     // @TODO: Aparently this is called several times on page LOAD. @TOFIX
-    const response = await getUserOrders( props.selectedTickerInfo.symbol, 20 ); 
+    const tenDaysAgo = Date.now() - 1000 * 60 * 60 * 24 * 10;
+    const response = await getUserOrders( props.selectedTickerInfo.symbol, 500, tenDaysAgo, getOptions( 'hideCanceled' )? true : false ); 
     if (response) {
       // some more validation?
       // @TODO: can we ask only for recent orders in the endpoint already?
@@ -151,7 +152,7 @@
       orders.value = response;
 
       // cargar los links de orders para crear un Trade.
-      loadTradeGroupsForSymbol(props.selectedTickerInfo.symbol, (listTripleOrders : TripleOrderType[]) => {
+      loadTradeGroupsFromDBForSymbol(props.selectedTickerInfo.symbol, (listTripleOrders : TripleOrderType[]) => {
         console.log('TODELETE: list of triple orders, loading: ', listTripleOrders);
         tradesGroupedInTripleOrders.value = listTripleOrders;
       });

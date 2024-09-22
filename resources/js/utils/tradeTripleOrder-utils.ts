@@ -47,7 +47,7 @@ export const indexMatchingOrder = function (
 // All functions to cooperate with backend, loading info from DB.
 
 // Function to load trade groups for a specific symbol
-export const loadTradeGroupsForSymbol = async (symbol: string, callbackOnSuccess: (data: any) => void) => {
+export const loadTradeGroupsFromDBForSymbol = async (symbol: string, callbackOnSuccess: (data: any) => void) => {
   try {
     const response = await axios.get(`/profile/trade-groups/${symbol}`);
     if (response.status === 200) {
@@ -58,7 +58,7 @@ export const loadTradeGroupsForSymbol = async (symbol: string, callbackOnSuccess
   }
 };
 
-export const saveTradeGroupsForSymbol = async (symbol: string | undefined, valueArray: TripleOrderType[]) : Promise<any> => {
+export const saveTradeGroupsInDBForSymbol = async (symbol: string | undefined, valueArray: TripleOrderType[]) : Promise<any> => {
   
   if (!symbol) return;
   return new Promise( (resolve, reject) => {

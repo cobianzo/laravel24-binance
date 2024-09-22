@@ -179,6 +179,7 @@ class BinanceController extends Controller
     }
 
     // Método para colocar una orden OCO
+    // @TODO: for some reason this doesnt work, so I had to create a manual curl call myself.
     public function placeOCOOrder(\Illuminate\Http\Request $request)
     {
         $validated = $request->validate([
@@ -225,7 +226,15 @@ class BinanceController extends Controller
     {
         $args   = array_merge(['symbol' => 'BTCUSDT'], $args);
         $api    = self::getBinanceApi();
-        $orders = $api->orders($args['symbol'], $args['limit'] ?? 500);
+        $limit  = isset($args['limit']) ? intval($args['limit']) : 500;
+        $orders = $api->orders($args['symbol'], $limit);
+        if (isset($args['date-after'])) { 
+            $orders = array_filter($orders, fn($o) => ($o['time'] > $args['date-after']));
+        }
+        $hideCanceled = isset($args['hide-canceled']) ? filter_var($args['hide-canceled'] ?? '0', FILTER_VALIDATE_BOOLEAN) : false;
+        if ($hideCanceled) {
+            $orders = array_filter($orders, fn($o) => ($o['status'] !== 'CANCELED') );
+        }
         return array_reverse($orders);
     }
 

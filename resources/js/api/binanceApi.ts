@@ -40,6 +40,7 @@ export const placeBinanceOCOOrder = async function (
   stopLimitPrice: string, // price to seel to lose
 ) {
     try {
+      // no need of the token. I we remove it, it'll work anyways.
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
       console.log('meta csrf:', csrfToken)
@@ -70,8 +71,13 @@ export const placeBinanceOCOOrder = async function (
     }
 }
 
-export const getUserOrders = async function( tickerSymbol: string, limit: number = 0): Promise<OrderBinanceType[]> {
-  const response = await axios.get(`/binance/list-orders?symbol=${tickerSymbol}&limit=${limit}`);
+export const getUserOrders = async function( tickerSymbol: string, limit: number = 500, dateAfter : number = 0, hideCanceled = false): Promise<OrderBinanceType[]> {
+
+  let url = `/binance/list-orders?symbol=${tickerSymbol}&limit=${limit}&hide-canceled=${hideCanceled ? 1 : 0}`;
+  if (dateAfter > 0) {
+    url += `&date-after=${dateAfter}`
+  }
+  const response = await axios.get(url);
   return response.data; 
 }
 

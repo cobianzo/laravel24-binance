@@ -42,8 +42,13 @@ const options = ref<{
 function handleCancelOrder(order: OrderBinanceType){
     console.log('Deleting order ', order.symbol, String(order.orderId), order);
     cancelOrder( order.symbol, String(order.orderId)).then( response => {
-      if (response.status === 200) console.log('All ok. Deleted', response);
+      if (response.status === 200) {
+        console.log('%cAll ok. Deleted', 'color:red', response);
+        props.tripleOrdersAPI.deleteTradeContainingOrder(String(order.orderId));
+      }
     }).finally(()=> props.syncOrdersForSelectedTicker(true) );
+
+    // @TODO: canceling an order should delete any trade that contains that order in TripleOrderTrades
 }
 
 function handlePlaceOCOOrderToExitOrder(originalFilledOrder: OrderBinanceType) {
@@ -78,10 +83,21 @@ function handlePlaceOCOOrderToExitOrder(originalFilledOrder: OrderBinanceType) {
   placeBinanceOCOOrder(symbol, side, quantity, entryPrice.toString(), stopPrice.toString(), stopLimitPrice.toString())
     .then(response => {
       console.log('the response', response);
-      // @TODO: Attach the new order to the origina order in our own Laravel DATABASE.
+      // Attach the new order to the origina order in our own Laravel DATABASE.
+      if (response.exitOrderIdGain)
+      {
+        props.tripleOrdersAPI.currentTripleOrder.value = {
+          originalEntryOrder: originalFilledOrder.orderId.toString(), 
+          closingGainOrder: response.exitOrderIdGain.toString(),
+          closingLossOrder: response.exitOrderIdLoss.toString(),
+        }
+        props.tripleOrdersAPI.saveCurrentTripleOrder();
+      }
+
       // Update the orders list
-    //   syncOrdersForSelectedTicker();
-    //  @TODO: update the balance of a single ticker for currency base..
+      props.syncOrdersForSelectedTicker( true );
+
+      //  @TODO: update the balance of a single ticker for currency base..
   }) ;
 }
 

@@ -69,8 +69,8 @@ export interface TripleOrdersAPIType {
   tradesGroupedInTripleOrders: Ref<TripleOrderType[]>, 
   // methods
   currentTripleOrder: Ref<TripleOrderType>,
-  clearCurrentTripleOrder: any,
-  selectCurrentTripleOrder: any,
-  saveCurrentTripleOrder: any,
+  clearCurrentTripleOrder: () => TripleOrderType,
+  selectCurrentTripleOrder: (arg0:string, arg1: string, arg2?: boolean = true) => void,
+  saveCurrentTripleOrder: () => void,
   deleteTradeContainingOrder: (arg0: string) => void
 }

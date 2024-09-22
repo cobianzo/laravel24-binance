@@ -152,7 +152,7 @@ class ProfileController extends Controller
 
     // functions for the creation of trades from selecting 2/3 orders (tripleorders)
     // Fetch trade group data for the given symbol
-    public function loadTradeGroupsForSymbol($symbol)
+    public function loadTradeGroupsFromDBForSymbol($symbol)
     {
         $user = Auth::user();
         $tradeGroups = json_decode($user->trade_group_links, true);
@@ -165,7 +165,7 @@ class ProfileController extends Controller
     }
 
     // Save trade group data for the given symbol
-    public function saveTradeGroupsForSymbol(Request $request, $symbol)
+    public function saveTradeGroupsInDBForSymbol(Request $request, $symbol)
     {
         $user = Auth::user();
         $tradeGroups = json_decode($user->trade_group_links, true) ?? [];

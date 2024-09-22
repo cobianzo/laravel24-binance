@@ -28,8 +28,8 @@ Route::delete('/user/fav-tickers/{ticker}', [ProfileController::class, 'deleteFa
 
 
 Route::middleware('auth')->group(function () {
-  Route::get('/profile/trade-groups/{symbol}', [ProfileController::class, 'loadTradeGroupsForSymbol']);
-  Route::post('/profile/trade-groups/{symbol}', [ProfileController::class, 'saveTradeGroupsForSymbol']);
+  Route::get('/profile/trade-groups/{symbol}', [ProfileController::class, 'loadTradeGroupsFromDBForSymbol']);
+  Route::post('/profile/trade-groups/{symbol}', [ProfileController::class, 'saveTradeGroupsInDBForSymbol']);
 });
 
 // Websockets functions for orders
