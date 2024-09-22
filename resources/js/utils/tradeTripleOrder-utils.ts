@@ -1,4 +1,5 @@
 import { TripleOrderType } from '@/types/ticker';
+import axios from 'axios';
 
 export const orderIsSelectedForCreatingATrade 
   : (orderId: string|number, currentTradeCreating: TripleOrderType) => string = 
@@ -45,3 +46,34 @@ export const indexMatchingOrder = function (
 
 // All functions to cooperate with backend, loading info from DB.
 
+// Function to load trade groups for a specific symbol
+export const loadTradeGroupsForSymbol = async (symbol: string, callbackOnSuccess: (data: any) => void) => {
+  try {
+    const response = await axios.get(`/profile/trade-groups/${symbol}`);
+    if (response.status === 200) {
+      callbackOnSuccess(response.data);
+    }
+  } catch (error) {
+    console.error('Error loading trade groups:', error);
+  }
+};
+
+export const saveTradeGroupsForSymbol = async (symbol: string | undefined, valueArray: TripleOrderType[]) : Promise<any> => {
+  
+  if (!symbol) return;
+  return new Promise( (resolve, reject) => {
+    try {
+      axios.post(`/profile/trade-groups/${symbol}`, {
+        trade_groups: valueArray,
+      }).then( response => {
+        if (response.status === 200) {
+          resolve(response.data);
+        }
+      }).catch( error => {
+        reject(error);
+      })
+    } catch (error) {
+      reject(error);
+    }
+  });
+};

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Vue
 import { ref, Ref, computed, watch } from 'vue';
-import { TickerType, OrderBinanceType, TripleOrderType } from '@/types/ticker';  
+import { TickerType, OrderBinanceType, TripleOrdersAPIType } from '@/types/ticker';  
 import { getTickerInfoCurrencyFromTicker, getPercentage, formatNumber, formatPriceToStepSize } from '@/utils/helpers'
 import { cancelOrder, placeBinanceOCOOrder } from '@/api/binanceApi';
 import {numberOrdersMatchingSelected } from '@/utils/tradeTripleOrder-utils';
@@ -20,16 +20,7 @@ import MatchTradesColumn from './MatchTradesColumn.vue';
 const props = defineProps<{
   orders: OrderBinanceType[]|null,
   ordersInfoInDB: { order_id: string, order_data: Object, parent_order_id: string|null }[],
-  matchingOrdersAPI: { 
-    // the model (reactive data)
-    tradesGroupedInTripleOrders: TripleOrderType[], 
-    // methods
-    currentTripleOrder: Ref<TripleOrderType>,
-    clearCurrentTripleOrder: any,
-    selectCurrentTripleOrder: any,
-    saveCurrentTripleOrder: any,
-    deleteTradeContainingOrder: any
-  },
+  tripleOrdersAPI: TripleOrdersAPIType,
   allTickers: TickerType[] | null,
   price: number,
   percentages: { gain: number, gainPrice: number, loss: number, lossPrice: number },
@@ -43,7 +34,7 @@ const followedUpOrders = ref<string[]>([]);
 const options = ref<{
   hideCanceled: boolean
 }>({
-  hideCanceled: getOptions( 'hideCanceled' )
+  hideCanceled: getOptions( 'hideCanceled' ) as boolean
 });
 
 
@@ -129,19 +120,22 @@ function handleFollowUpOrder(order: OrderBinanceType) {
   <div class="matching-buttons w-full flex flex-row justify-end gap-4">
     
     <button 
-      v-if="numberOrdersMatchingSelected(props.matchingOrdersAPI.currentTripleOrder.value) >= 2"
+      v-if="numberOrdersMatchingSelected(props.tripleOrdersAPI.currentTripleOrder.value) >= 2"
       class="text-sm bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded" 
-      @click="props.matchingOrdersAPI.saveCurrentTripleOrder()">
+      @click="props.tripleOrdersAPI.saveCurrentTripleOrder()">
         Save matching orders as a Trade
     </button>
     <button 
-      v-if="numberOrdersMatchingSelected(props.matchingOrdersAPI.currentTripleOrder.value) > 0"
+      v-if="numberOrdersMatchingSelected(props.tripleOrdersAPI.currentTripleOrder.value) > 0"
       class="text-sm bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" 
-      @click="props.matchingOrdersAPI.clearCurrentTripleOrder()">
+      @click="props.tripleOrdersAPI.clearCurrentTripleOrder()">
         Cancel matching orders as a Trade
     </button>
   </div>
   <div class="w-full border border-gray-400">
+    {{ tripleOrdersAPI.currentTripleOrder.value }}
+    <br/>
+    {{ tripleOrdersAPI.tradesGroupedInTripleOrders.value }}
     <table 
       class="table-auto w-full border-collapse"
       :class="{
@@ -250,7 +244,7 @@ function handleFollowUpOrder(order: OrderBinanceType) {
           <td class="the-matching-order px-1 py-0 text-center ">
             <MatchTradesColumn 
               :order="order"
-              :matchingOrdersAPI="matchingOrdersAPI"
+              :tripleOrdersAPI="tripleOrdersAPI"
             />
           </td>
         </tr>

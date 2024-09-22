@@ -2,32 +2,23 @@
 import { Ref, computed } from 'vue';
 
 import { orderIsSelectedForCreatingATrade, indexMatchingOrder } from '@/utils/tradeTripleOrder-utils';
-import { OrderBinanceType, TripleOrderType } from '@/types/ticker';  
+import { OrderBinanceType, TripleOrdersAPIType } from '@/types/ticker';  
 
 const props = defineProps<{
   order: OrderBinanceType,
-  matchingOrdersAPI: { 
-    // the model (reactive data)
-    tradesGroupedInTripleOrders: TripleOrderType[], 
-    // methods
-    currentTripleOrder: Ref<TripleOrderType>,
-    clearCurrentTripleOrder: any,
-    selectCurrentTripleOrder: any,
-    saveCurrentTripleOrder: any,
-    deleteTradeContainingOrder: any
-  },
+  tripleOrdersAPI: TripleOrdersAPIType
 }>();
 
 function handleMatchOrders(orderData: OrderBinanceType) {
-  props.matchingOrdersAPI.selectCurrentTripleOrder(orderData.orderId.toString(), orderData.type);
+  props.tripleOrdersAPI.selectCurrentTripleOrder(orderData.orderId.toString(), orderData.type);
 }
 
 const labelOnColumn = computed(() => {
-  const isSelected = orderIsSelectedForCreatingATrade(props.order.orderId, props.matchingOrdersAPI.currentTripleOrder.value );
+  const isSelected = orderIsSelectedForCreatingATrade(props.order.orderId, props.tripleOrdersAPI.currentTripleOrder.value );
   if (isSelected) {
     return 'selected';
   }
-  const indexOfTrade = indexMatchingOrder(props.order.orderId.toString(), props.matchingOrdersAPI.tradesGroupedInTripleOrders.value )
+  const indexOfTrade = indexMatchingOrder(props.order.orderId.toString(), props.tripleOrdersAPI.tradesGroupedInTripleOrders.value )
   return ( indexOfTrade ) ? `Trade ${indexOfTrade}` : '🔗'
 });
 </script>
@@ -37,7 +28,7 @@ const labelOnColumn = computed(() => {
     v-if="props.order.status !== 'CANCELED'"
     title="Match order open-closing trade"
     class="text-accent ml-5 text-lg"
-    :class="{'animate-pulse': Object.values(props.matchingOrdersAPI.currentTripleOrder.value).some( (value) => value === order.orderId ) }"
+    :class="{'animate-pulse': Object.values(props.tripleOrdersAPI.currentTripleOrder.value).some( (value) => value === order.orderId ) }"
     @click="handleMatchOrders(order)">
       {{  labelOnColumn }}
   </button>
@@ -45,7 +36,7 @@ const labelOnColumn = computed(() => {
     v-if="labelOnColumn.includes('Trade')"
     title="Match order open-closing trade"
     class="text-accent ml-5 text-lg"
-    @click="matchingOrdersAPI.deleteTradeContainingOrder(order.orderId.toString())"
+    @click="tripleOrdersAPI.deleteTradeContainingOrder(order.orderId.toString())"
     >
     ⛔️ 
   </button>

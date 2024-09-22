@@ -1,18 +1,18 @@
 <script setup lang="ts">
   // vue
-  import { computed, watch, Ref, ref, onMounted, onBeforeMount, onBeforeUnmount } from 'vue';
+  import { watch, Ref, ref, onMounted, onBeforeUnmount } from 'vue';
   
   // Child components
   import Orders from './Orders.vue';
 
   // types, api, localstorage, helpers
-  import { TickerType, TradeOrderType, TripleOrderType } from '@/types/ticker';  
+  import { OrderBinanceType, TickerType, TradeOrderType, TripleOrderType, TripleOrdersAPIType } from '@/types/ticker';  
 
-  import { getUserOrders, placeBinanceOrder, apiCallTest, getUserBalances, cancelOrder, placeBinanceOCOOrder } from '@/api/binanceApi';
+  import { getUserOrders, placeBinanceOrder, apiCallTest, getUserBalances } from '@/api/binanceApi';
   import { saveOptions } from '@/utils/localStorage-CRUD';
   // import { startWebSocket, closeWebSocket } from '@/utils/websocket-orders';
-  import { formatNumber, getTickerInfoCurrencyFromTicker, stepSizeDecimalsForTicker } from '@/utils/helpers';
-  import axios from 'axios';
+  import { formatNumber, stepSizeDecimalsForTicker } from '@/utils/helpers';
+  import { saveTradeGroupsForSymbol, loadTradeGroupsForSymbol } from '@/utils/tradeTripleOrder-utils';
   
 
   // Props sent from parent
@@ -28,7 +28,7 @@
   }>();
 
   // Reactive vars
-  const orders = ref<Object[]|null>(null);
+  const orders = ref<OrderBinanceType[]|null>(null);
   
   // not in use. If deleted, delete all references
   const ordersInfoInDB = ref<{ order_id: string, order_data: Object, parent_order_id: string|null }[]>([])
@@ -57,37 +57,35 @@
     }
   }
   const saveCurrentTripleOrder = function() {
-    // validatin. If there are other in the matchedorders, we need to clear them.
-    let cleanMatchedOrders = [...tradesGroupedInTripleOrders.value];
-    const currentMatchingArConcatString: string = currentTripleOrder.value.originalEntryOrder + '|' + currentTripleOrder.value.closingGainOrder + '|' + currentTripleOrder.value.closingLossOrder;
+    // validation. If there are other in the matchedorders, we need to clear them.
+    // covert proxy type into a clean array:
+    let cleanMatchedOrders = [... JSON.parse(JSON.stringify(tradesGroupedInTripleOrders.value)) ];
+    const currentMatchingArConcatAsArray = Object.values(currentTripleOrder.value).filter( vals => vals !== null )
     cleanMatchedOrders = cleanMatchedOrders.filter( matchedSingle => {
       // if any of the three orders is in any of the three orders of currentTripleOrder.value, we remove it
-      if ( currentMatchingArConcatString.includes(matchedSingle.originalEntryOrder) || currentMatchingArConcatString.includes(matchedSingle.closingGainOrder) || currentMatchingArConcatString.includes(matchedSingle.closingLossOrder) ) {
+      if ( currentMatchingArConcatAsArray.includes(matchedSingle.originalEntryOrder) || currentMatchingArConcatAsArray.includes(matchedSingle.closingGainOrder) || currentMatchingArConcatAsArray.includes(matchedSingle.closingLossOrder) ) {
         return false;
       } else {
         return true;  
       }
     });
-    cleanMatchedOrders.push(currentTripleOrder.value);
+    const newTripla = JSON.parse(JSON.stringify(currentTripleOrder.value));
+    cleanMatchedOrders.push(newTripla);
     tradesGroupedInTripleOrders.value = cleanMatchedOrders;
+
+    // save into the DB and clear the temporary current linking
+    saveTradeGroupsForSymbol( props.selectedTickerInfo?.symbol, cleanMatchedOrders);
     clearCurrentTripleOrder();
   }
   const deleteTradeContainingOrder = function(orderId: string) {
-    tradesGroupedInTripleOrders.value = tradesGroupedInTripleOrders.value.filter( matchedSingle => {
+    const newArray: TripleOrderType[] = tradesGroupedInTripleOrders.value.filter( matchedSingle => {
       return ! Object.values(matchedSingle).includes(orderId);
     });
+    tradesGroupedInTripleOrders.value = newArray;
+    saveTradeGroupsForSymbol( props.selectedTickerInfo?.symbol, newArray);
   }
 
-  type TripleOrdersAPI = { 
-    tradesGroupedInTripleOrders: Ref<TripleOrderType[]>,
-    currentTripleOrder: Ref<TripleOrderType>,
-    clearCurrentTripleOrder: () => void,
-    selectCurrentTripleOrder: (orderId: string, orderType: string, toggle?: boolean) => void,
-    saveCurrentTripleOrder: () => void,
-    deleteTradeContainingOrder: () => void,
-  }
-
-  const matchingOrdersAPI: TripleOrdersAPI = {
+  const tripleOrdersAPI: TripleOrdersAPIType = {
     tradesGroupedInTripleOrders,
     currentTripleOrder,
     clearCurrentTripleOrder,
@@ -100,9 +98,9 @@
     console.log('TODELETE: updating trade order');
     let quantity = props.theTrade.amount? props.theTrade.amount / props.price : 0;
 
-    const quantityDecimals = stepSizeDecimalsForTicker(props.selectedTickerInfo.symbol, props.allTickers);
+    const quantityDecimals = stepSizeDecimalsForTicker(props.selectedTickerInfo?.symbol, props.allTickers);
     quantity = Number(quantity.toFixed(quantityDecimals));
-    console.log('calculated quantity: '+quantity+' for ',props.selectedTickerInfo.symbol, quantityDecimals);
+    console.log('calculated quantity: '+quantity+' for ',props.selectedTickerInfo?.symbol, quantityDecimals);
     const setupTradeData: TradeOrderType = {
       symbol: props.selectedTickerInfo?.symbol ?? '',
       quantity,
@@ -149,7 +147,14 @@
       // some more validation?
       // @TODO: can we ask only for recent orders in the endpoint already?
       console.info('%c ORders: ', 'font-size: 2rem; background:black;color:white', response);
+
       orders.value = response;
+
+      // cargar los links de orders para crear un Trade.
+      loadTradeGroupsForSymbol(props.selectedTickerInfo.symbol, (listTripleOrders : TripleOrderType[]) => {
+        console.log('TODELETE: list of triple orders, loading: ', listTripleOrders);
+        tradesGroupedInTripleOrders.value = listTripleOrders;
+      });
 
       // now that we have initialized the orders, we want to start the websocket to update
       // it incase a new order comes in.
@@ -167,24 +172,7 @@
       // };
       
     }
-    updateOrdersFromDB();
   }
-
-
-  // Extended Order info from the DB - relationship between cover OCO orders and Opened buy orders.
-  const updateOrdersFromDB = async () => {
-    await axios.get('/api/orders?limit=15').then(response => {
-      console.log('TODELETE: updated OrdersDB: ', response);
-      ordersInfoInDB.value = response.data
-    });
-  }
-
-
-  // WIP: for the websockets
-  // function updateOrders(newOrder) {
-  //   console.log('>>>>> in theory a new order has arrived!! ', newOrder);
-  //   // orders.value = [...orders.value, newOrder];
-  // }
 
   // Watchers
 
@@ -198,11 +186,21 @@
     }
   );
 
+  // @TODO: This could be moved to the component of MatchTradesColumn, for cleaniness.
   watch(
-    () => props.selectedTickerInfo,
+    () => tradesGroupedInTripleOrders,
+    (newTradesGroupedInTripleOrders) => {
+      console.log('>>>>>> Watching tradesGroupedInTripleOrders', newTradesGroupedInTripleOrders);
+    },
+    { deep: true }
+  );
+
+  watch(
+    () => props.selectedTickerInfo as TickerType,
     (newTicker: TickerType) => {
+      console.log('TODELELEEE >>>>>  We should replace the orders.', newTicker)
       if ( newTicker?.symbol ) {
-        syncOrdersForSelectedTicker();
+        syncOrdersForSelectedTicker(true);
       }
     }
   );
@@ -259,11 +257,10 @@
       <Orders
         :orders="orders"
         :ordersInfoInDB="ordersInfoInDB"
-        :matchingOrdersAPI="matchingOrdersAPI"
+        :tripleOrdersAPI="tripleOrdersAPI"
         :allTickers="props.allTickers"
         :percentages="props.percentages"
         :price="props.price"
-        :selectedTickerInfo="props.selectedTickerInfo"
         :syncOrdersForSelectedTicker="syncOrdersForSelectedTicker"
       />
     </div>

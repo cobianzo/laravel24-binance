@@ -39,7 +39,8 @@ export function countDecimals(number: number) {
 
 
 // returns 0.00001
-export function stepSizeDecimalsForTicker( symbol: string, allTickers: TickerType[] ) {
+export function stepSizeDecimalsForTicker( symbol: string | null, allTickers: TickerType[] ) {
+  if (! symbol ) return null;
   const find = allTickers.find( t => t.symbol === symbol );
   if (find?.stepSize) {
     return countDecimals(find.stepSize);

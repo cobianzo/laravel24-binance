@@ -21,11 +21,16 @@ Route::delete('/binance/cancel-order', [BinanceController::class, 'cancelOrder']
 Route::get('/test-data', [BinanceController::class, 'handleTestData'])->middleware('auth');
 
 
-// Internal Binance routes
+// Internal routes, not connecting to Binance
 Route::put(   '/user/fav-tickers',          [ProfileController::class, 'getFavTicker'])   ->middleware('auth');
 Route::post(  '/user/fav-tickers',          [ProfileController::class, 'addFavTicker'])   ->middleware('auth');
 Route::delete('/user/fav-tickers/{ticker}', [ProfileController::class, 'deleteFavTicker'])->middleware('auth');
 
+
+Route::middleware('auth')->group(function () {
+  Route::get('/profile/trade-groups/{symbol}', [ProfileController::class, 'loadTradeGroupsForSymbol']);
+  Route::post('/profile/trade-groups/{symbol}', [ProfileController::class, 'saveTradeGroupsForSymbol']);
+});
 
 // Websockets functions for orders
 http://127.0.0.1:8000/binance/test-endpoint

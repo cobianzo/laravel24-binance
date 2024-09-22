@@ -149,6 +149,40 @@ class ProfileController extends Controller
         return response()->json(['success' => true, 'fav_tickers' => array_values($favTickers)]);
     }
 
+
+    // functions for the creation of trades from selecting 2/3 orders (tripleorders)
+    // Fetch trade group data for the given symbol
+    public function loadTradeGroupsForSymbol($symbol)
+    {
+        $user = Auth::user();
+        $tradeGroups = json_decode($user->trade_group_links, true);
+
+        if (isset($tradeGroups[$symbol])) {
+            return response()->json($tradeGroups[$symbol]);
+        }
+
+        return response()->json([]);
+    }
+
+    // Save trade group data for the given symbol
+    public function saveTradeGroupsForSymbol(Request $request, $symbol)
+    {
+        $user = Auth::user();
+        $tradeGroups = json_decode($user->trade_group_links, true) ?? [];
+
+        // Update the trade groups for the given symbol
+        $tradeGroups[$symbol] = $request->input('trade_groups');
+
+        // Save back to the user's trade_group_links field
+        $user->trade_group_links = json_encode($tradeGroups);
+        $user->save();
+
+        return response()->json(['status' => 'success']);
+    }
+
+
+
+
     /**
      * Delete the user's account.
      */

@@ -63,3 +63,14 @@ export interface TripleOrderType {
   closingGainOrder: string|null,
   closingLossOrder: string|null,
 }
+
+export interface TripleOrdersAPIType {
+  // the model (reactive data)
+  tradesGroupedInTripleOrders: Ref<TripleOrderType[]>, 
+  // methods
+  currentTripleOrder: Ref<TripleOrderType>,
+  clearCurrentTripleOrder: any,
+  selectCurrentTripleOrder: any,
+  saveCurrentTripleOrder: any,
+  deleteTradeContainingOrder: (arg0: string) => void
+}
