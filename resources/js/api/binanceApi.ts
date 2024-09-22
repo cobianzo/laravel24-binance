@@ -37,9 +37,12 @@ export const placeBinanceOCOOrder = async function (
   quantity: string,
   price: string,        // price of sell to gain
   stopPrice: string,    // trigger to set the next line
-  stopLimitPrice: string// price to seel to lose
+  stopLimitPrice: string, // price to seel to lose
 ) {
     try {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+      console.log('meta csrf:', csrfToken)
       console.log('OCO Order placeing... BEFORE successfully:', symbol, side, quantity, price, stopPrice, stopLimitPrice);
       // Enviar los parámetros de la orden OCO al backend
       const response = await axios.post('/binance/order/oco', {
@@ -48,8 +51,14 @@ export const placeBinanceOCOOrder = async function (
           quantity: quantity,        // Cantidad que se quiere operar
           price: price,              // Precio límite - vende y recibe ganancia
           stopPrice: stopPrice,      // Precio de activación del Stop-Limit a stopLimitPrice
-          stopLimitPrice: stopLimitPrice // Precio límite del Stop-Limit: vender y aceptar perdidas
-      });
+          stopLimitPrice: stopLimitPrice, // Precio límite del Stop-Limit: vender y aceptar perdidas
+        
+      },{
+        headers: {
+          'X-CSRF-TOKEN': csrfToken
+        }
+      }
+    );
 
       // Si la orden es exitosa, imprime los resultados
       console.log('OCO Order placed successfully:', response.data);
@@ -72,6 +81,9 @@ export const cancelOrder = async function( symbol: string, orderId: string) {
   });
   return response;
 }
+
+// Orders in DB
+
 
 // JUST FOR TESTING @TODELETE:
 export const apiCallTest = async function( justOneParam: string) {

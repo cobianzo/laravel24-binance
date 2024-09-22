@@ -57,6 +57,15 @@ export function formatPriceToStepSize( price: number | string, symbol: string, a
   return Number(priceFloat.toFixed(decimals));
 }
 
+export function formatPriceToPriceFilter( price: number | string, symbol: string, allTickers : TickerType[]) : number {
+  // @TODO: set to a fixed 2 decimals, but it should betaken from our json file.
+  const priceString : string =  typeof price === 'number' ? price.toString() : price;
+  let priceFloat : number = parseFloat(priceString);
+  const decimals = 2;
+  if (!decimals) return priceFloat;
+
+  return Number(priceFloat.toFixed(decimals));
+}
 export function getPercentage(now:number | string, before:number | string, addSymbol = true) :string|number {
   const beforeAsFloat = parseFloat(before.toString());
   const diff = parseFloat(now.toString()) - beforeAsFloat;

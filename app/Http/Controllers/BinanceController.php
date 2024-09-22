@@ -181,28 +181,29 @@ class BinanceController extends Controller
     // Método para colocar una orden OCO
     public function placeOCOOrder(\Illuminate\Http\Request $request)
     {
-        $user = Auth::user(); // Obtener el usuario autenticado
+        $validated = $request->validate([
+            'symbol' => 'required|string',     // Trading pair, e.g., BTCUSDT
+            'quantity' => 'required',  // Quantity to buy
+            'price' => 'required',     // Price for the LIMIT order
+            'stopPrice' => 'required', 
+            'stopLimitPrice' => 'required', 
+        ]);
+        
+        $body = [
+            'symbol' => $validated['symbol'],
+            'side' => $request->input('side', 'SELL'), 
+            'quantity' => (string) $validated['quantity'], 
+            'price' => (string) $validated['price'], 
+            'stopPrice' => (string) $validated['stopPrice'], 
+            'stopLimitPrice' => (string) $validated['stopLimitPrice'], 
+            'stopLimitTimeInForce' => $request->input('stopLimitTimeInForce', 'GTC'), 
+            'recvWindow' => $request->input('recvWindow', '5000'),
+        ];
 
-        // Parámetros de la orden OCO (puedes añadir validaciones)
-        $symbol           = $request->input('symbol'); // eg BTCUSDT
-        $side             = $request->input('side'); // 'BUY' o 'SELL'
-        $quantity         = $request->input('quantity');  // eg 0.01 BTC
-        $price            = $request->input('price'); // Límite . eg 58071.21000000
-        $stopPrice        = $request->input('stopPrice'); // Precio de activación para la orden stop
-        $stopLimitPrice   = $request->input('stopLimitPrice'); // Precio límite de la orden stop
-        $stopLimitTimeInForce = 'GTC'; // Good Till Canceled, podría configurarse dinámicamente
+        $response = self::sendBinanceRequest('POST', 'v3/order/oco', $body, Auth::user());
 
-        $api      = self::getBinanceApi();        
-        $response =$api->OCOorder(
-            $side, 
-            $symbol,
-            $quantity,
-            $price,
-            $stopPrice,
-            [
-                'stopLimitPrice'       => $stopLimitPrice,
-            ],
-            false);
+        return response()->json($response->json());
+
         return $response;
     }
 
@@ -211,7 +212,7 @@ class BinanceController extends Controller
     public function cancelOrder(\Illuminate\Http\Request $request)
     {
         // return $request->input('symbol') . '/// ' . $request->input('orderId');
-        $api = \App\Http\Controllers\BinanceController::getBinanceApi();
+        $api = self::getBinanceApi();
         $response = $api->cancel(
             $request->input('symbol'),
             $request->input('orderId')
@@ -248,11 +249,97 @@ class BinanceController extends Controller
         // return $fullUrl;
 
         // Realizar la solicitud HTTP a Binance
-        $response = Http::withHeaders([
+        $httpClient = Http::withHeaders([
             'X-MBX-APIKEY' => self::get_public_key(),
-        ])->$method( self::get_api_base() . $fullUrl);
+        ]);
+        
+        if (app()->environment('local')) {
+            $httpClient = $httpClient->withoutVerifying();
+        }
+
+        $response = $httpClient->$method( self::get_api_base() . $fullUrl);
 
         return $response;
+    }
+
+    public function placeOCOOrderCurl(\Illuminate\Http\Request $request) {
+
+        // Validate the incoming request parameters
+        $validated = $request->validate([
+            'symbol' => 'required|string',     // Trading pair, e.g., BTCUSDT
+            'quantity' => 'required',  // Quantity to buy
+            'price' => 'required',     // Price for the LIMIT order
+            'stopPrice' => 'required', 
+            'stopLimitPrice' => 'required', 
+        ]);
+        
+        
+        $body = [
+            'symbol' => $validated['symbol'],
+            'side' => $request->input('side', 'SELL'), 
+            'quantity' => (string) $validated['quantity'], 
+            'price' => (string) $validated['price'], 
+            'stopPrice' => (string) $validated['stopPrice'], 
+            'stopLimitPrice' => (string) $validated['stopLimitPrice'], 
+            'stopLimitTimeInForce' => $request->input('stopLimitTimeInForce', 'GTC'), 
+            'recvWindow' => $request->input('recvWindow', '5000'),
+        ];
+        
+        $reponse = self::sendBinanceRequestCurl( 'POST', 'v3/order/oco', $body );
+        
+        return $reponse;
+    }
+    // Another way (the 3rd) to make a request, as I was strugginlg with OCO orders. The API doesnt have the function
+    public static function sendBinanceRequestCurl( $method, $url, $body = [] ) {
+        // v3/order/oco
+        
+        $curl        = curl_init();
+        $timestamp   = round(microtime(true) * 1000);
+        $body        = array_merge( $body, [ 'timestamp' => $timestamp ]);
+        $queryString = http_build_query($body);
+        $signature   = hash_hmac('sha256', $queryString, self::get_secret_key());
+
+        $fullUrl = self::get_api_base() . $url . '?' . $queryString . '';
+        $fullUrl .= '&signature=' . $signature;
+
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $fullUrl,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_POSTFIELDS => "",
+            CURLOPT_HTTPHEADER => [
+                "X-MBX-APIKEY: " . self::get_public_key()
+            ],
+
+            // just for local env:
+            CURLOPT_SSL_VERIFYPEER => app()->environment('local') ? false : true,
+        ]);
+        
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        
+        curl_close($curl);
+        
+        if ($err) {
+            return "cURL Error #:" . $err;
+        } else {
+            $data = json_decode($response, true);
+            if ( !empty($data['orderListId'])) {
+            $useful_data = [
+                'exitOrderIdGain' => $data['orderReports'][1]['orderId'],
+                'exitOrderIdLoss' => $data['orderReports'][0]['orderId'],
+                'data' => $data,
+            ];
+            return $useful_data;
+            } else {
+            return "cURL Error, not found  #data['orderListId']:  " . (!empty( $data['msg'] ) ? $data['msg'] : '');
+            }
+        }
+
     }
 
 

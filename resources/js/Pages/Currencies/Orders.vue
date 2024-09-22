@@ -2,7 +2,7 @@
 // Vue
 import { ref, Ref, computed, watch } from 'vue';
 import { TickerType, OrderBinanceType, TripleOrdersAPIType } from '@/types/ticker';  
-import { getTickerInfoCurrencyFromTicker, getPercentage, formatNumber, formatPriceToStepSize } from '@/utils/helpers'
+import { getTickerInfoCurrencyFromTicker, getPercentage, formatNumber, formatPriceToStepSize, formatPriceToPriceFilter } from '@/utils/helpers'
 import { cancelOrder, placeBinanceOCOOrder } from '@/api/binanceApi';
 import {numberOrdersMatchingSelected } from '@/utils/tradeTripleOrder-utils';
 import { saveOptions, getOptions } from '@/utils/localStorage-CRUD';
@@ -24,7 +24,7 @@ const props = defineProps<{
   allTickers: TickerType[] | null,
   price: number,
   percentages: { gain: number, gainPrice: number, loss: number, lossPrice: number },
-  selectedTickerInfo: TickerType,
+  selectedTickerInfo: TickerType | null | undefined,
   syncOrdersForSelectedTicker: (arg0: boolean) => void,
 }>()
 
@@ -57,16 +57,21 @@ function handlePlaceOCOOrderToExitOrder(originalFilledOrder: OrderBinanceType) {
   }
 
   const symbol = originalFilledOrder.symbol;
+  
   const side = 'SELL'; // Since you want to sell BTC for profit or loss
   let quantity = originalFilledOrder.executedQty; // or origQty;
-  quantity = formatPriceToStepSize(quantity, props.selectedTickerInfo.symbol, props.allTickers).toString();
+  quantity = formatPriceToStepSize(quantity, symbol, props.allTickers).toString();
 
-  const entryPrice = parseFloat(originalFilledOrder.price); // Price you bought BTC at
-  const gainPrice = entryPrice + entryPrice * props.percentages.gain/100; // % above entry price
+  let entryPrice = parseFloat(originalFilledOrder.price); // Price you bought BTC at
+  entryPrice = formatPriceToPriceFilter(entryPrice, symbol, props.allTickers);
+  let gainPrice = entryPrice + entryPrice * props.percentages.gain/100; // % above entry price
+  gainPrice = formatPriceToPriceFilter(gainPrice, symbol, props.allTickers);
   
-  const stopPrice = entryPrice - entryPrice * props.percentages.loss/100;
+  let stopPrice = entryPrice - entryPrice * props.percentages.loss/100;
+  stopPrice = formatPriceToPriceFilter(stopPrice, symbol, props.allTickers);
   const gap = 0.5; // percentage of the price to separate stopLimit and stopLimitPrice.
-  const stopLimitPrice = stopPrice - entryPrice * gap / 100;
+  let stopLimitPrice = stopPrice - entryPrice * gap / 100;
+  stopLimitPrice = formatPriceToPriceFilter(stopLimitPrice, symbol, props.allTickers);
 
   console.log(`From price ${entryPrice} (+${props.percentages.gain} -${props.percentages.loss}) Before placing the OCO order with , symbol: ${symbol}, side: ${side}, quantity: ${quantity}, price: ${gainPrice}, stopPrice: ${stopPrice}, stopLimitPrice: ${stopLimitPrice}`, originalFilledOrder);
 
@@ -76,7 +81,7 @@ function handlePlaceOCOOrderToExitOrder(originalFilledOrder: OrderBinanceType) {
       // @TODO: Attach the new order to the origina order in our own Laravel DATABASE.
       // Update the orders list
     //   syncOrdersForSelectedTicker();
-    //  @TODO: update the balance of a single ticker.
+    //  @TODO: update the balance of a single ticker for currency base..
   }) ;
 }
 
@@ -133,9 +138,6 @@ function handleFollowUpOrder(order: OrderBinanceType) {
     </button>
   </div>
   <div class="w-full border border-gray-400">
-    {{ tripleOrdersAPI.currentTripleOrder.value }}
-    <br/>
-    {{ tripleOrdersAPI.tradesGroupedInTripleOrders.value }}
     <table 
       class="table-auto w-full border-collapse"
       :class="{

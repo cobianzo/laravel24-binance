@@ -260,6 +260,7 @@
         :tripleOrdersAPI="tripleOrdersAPI"
         :allTickers="props.allTickers"
         :percentages="props.percentages"
+        :selectedTickerInfo="props.selectedTickerInfo"
         :price="props.price"
         :syncOrdersForSelectedTicker="syncOrdersForSelectedTicker"
       />
