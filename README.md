@@ -1,3 +1,21 @@
+# TODO NEXT
+
+The Exit orders should be kind of gray if it was not executed (status EXPIRED).
+They should show
+
+-   the percentage of winning/losing respect the original entry order
+-   The theorical winning money.
+-   If excuted, take the money that we really got, and compare to the money that we really paid. Comare it with theorical monay to show the commission.
+
+Remove followup orders in exit orders.
+
+The tripe orders update must update the info of the original orders and the exit orders.
+
+The set OCO action button in the table should be hidden if the
+I want that clicking on the action button opens the gain and loss percentages respect of the entry order.
+
+1. When the entry order is set. We create a new tripleorders with an entry order.
+
 # NOTES BY ALVARO
 
 # Creation step by step

@@ -1,4 +1,4 @@
-import { TickerType } from '@/types/ticker';
+import { TickerType, OrderBinanceType } from '@/types/ticker';
 
 /**
    * Converts 23.3400000 into '23.34'
@@ -74,4 +74,11 @@ export function getPercentage(now:number | string, before:number | string, addSy
     return perc.toFixed(2) + '%';
   }
   return perc;
+}
+
+// orders helpers
+
+export function getOrderByOrderId( orderId: string, orders: OrderBinanceType[] ): OrderBinanceType | null {
+  if (!orderId) return null;
+  return orders.find( order => order.orderId.toString() === orderId ) ?? null;
 }

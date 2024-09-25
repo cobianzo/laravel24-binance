@@ -4,9 +4,12 @@ import { ref, Ref, computed, watch } from 'vue';
 import { TickerType, OrderBinanceType, TripleOrdersAPIType } from '@/types/ticker';  
 import { getTickerInfoCurrencyFromTicker, getPercentage, formatNumber, formatPriceToStepSize, formatPriceToPriceFilter } from '@/utils/helpers'
 import { cancelOrder, placeBinanceOCOOrder } from '@/api/binanceApi';
-import {numberOrdersMatchingSelected } from '@/utils/tradeTripleOrder-utils';
+import { numberOrdersInCurrentTrade } from '@/utils/tradeTripleOrder-utils';
 import { saveOptions, getOptions } from '@/utils/localStorage-CRUD';
+
+// components
 import MatchTradesColumn from './MatchTradesColumn.vue';
+import OCOTradeActionColumn from './OCOTradeActionColumn.vue';
 
 /**
  * Logic in here:
@@ -19,7 +22,7 @@ import MatchTradesColumn from './MatchTradesColumn.vue';
  
 const props = defineProps<{
   orders: OrderBinanceType[]|null,
-  ordersInfoInDB: { order_id: string, order_data: Object, parent_order_id: string|null }[],
+  // ordersInfoInDB: { order_id: string, order_data: Object, parent_order_id: string|null }[],
   tripleOrdersAPI: TripleOrdersAPIType,
   allTickers: TickerType[] | null,
   price: number,
@@ -31,6 +34,8 @@ const props = defineProps<{
 // Reactive variables
 // Filled orders that we want to monitorize if we are winninng or losing
 const followedUpOrders = ref<string[]>([]);
+const currentlyEditingOCOOrder = ref<string>('');
+const updateCurrentyEditingOCOOrder = (theOrderId : string) => { currentlyEditingOCOOrder.value = theOrderId; };
 const options = ref<{
   hideCanceled: boolean
 }>({
@@ -117,7 +122,6 @@ function handleFollowUpOrder(order: OrderBinanceType) {
   }
 }
 
-
 </script>
 
 <template>
@@ -141,13 +145,13 @@ function handleFollowUpOrder(order: OrderBinanceType) {
   <div class="matching-buttons w-full flex flex-row justify-end gap-4">
     
     <button 
-      v-if="numberOrdersMatchingSelected(props.tripleOrdersAPI.currentTripleOrder.value) >= 2"
+      v-if=" numberOrdersInCurrentTrade(props.tripleOrdersAPI.currentTripleOrder.value) >= 2"
       class="text-sm bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded" 
       @click="props.tripleOrdersAPI.saveCurrentTripleOrder()">
         Save matching orders as a Trade
     </button>
     <button 
-      v-if="numberOrdersMatchingSelected(props.tripleOrdersAPI.currentTripleOrder.value) > 0"
+      v-if=" numberOrdersInCurrentTrade(props.tripleOrdersAPI.currentTripleOrder.value) > 0"
       class="text-sm bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" 
       @click="props.tripleOrdersAPI.clearCurrentTripleOrder()">
         Cancel matching orders as a Trade
@@ -162,6 +166,7 @@ function handleFollowUpOrder(order: OrderBinanceType) {
       >
       <thead>
         <tr class="bg-gray-200 text-sm">
+          <th class="text-left px-1 py-0">Trade Status</th>
           <th class="text-left px-1 py-0">Date</th>
           <th class="text-left py-0 overflow-hidden max-w-[25px]">Type</th>
           <th class="text-left px-1 py-0 text-center">Side</th>
@@ -184,6 +189,11 @@ function handleFollowUpOrder(order: OrderBinanceType) {
               [`status-${order.status.toLowerCase()}`]: true
             }"
         >
+          <td class="px-1 py-0">
+            {{ order.tradeStatus ?? '' }}
+            {{ order.GainOrLoss ? formatNumber(order.GainOrLoss,1) : '' }}
+            <!-- TODO: if order.tradeStatus === GAIN or LOSS,calculate the amount.  -->
+          </td>
           <td class="px-1 py-0">{{ new Date(order.time).toLocaleString() }}</td>
           <td class="py-0 overflow-hidden max-w-[25px] text-center">
             {{ order.type === 'MARKET' ? 'MRK' : (
@@ -230,6 +240,7 @@ function handleFollowUpOrder(order: OrderBinanceType) {
                 'text-red-600': parseFloat(order.price) > props.price,
               }"
             >
+             <!-- Calculate inline the percentage in real time -->
               {{ formatNumber( (props.price - parseFloat(order.price)) * parseFloat(getPercentage(order.price, props.price, false).toString())/ 100, 2) }}
             </span>
           </td>
@@ -242,6 +253,15 @@ function handleFollowUpOrder(order: OrderBinanceType) {
               ❌
             </button>
 
+            <!-- TODO: show this only if it is an entry order. -->
+            <OCOTradeActionColumn 
+              :currentPrice="props.price"
+              :entryOrder="order"
+              :percentages="props.percentages"
+              :selectedTickerInfo="selectedTickerInfo"
+              :updateCurrentyEditingOCOOrder="updateCurrentyEditingOCOOrder"
+              :isEditing="currentlyEditingOCOOrder === order.orderId.toString()"
+            />
             <button 
               title="Place stop losses gain and loss (OCO order)"
               v-if="'FILLED' === order.status && ['LIMIT', 'MARKET'].includes(order.type)"
@@ -251,7 +271,7 @@ function handleFollowUpOrder(order: OrderBinanceType) {
             </button>
             <button 
               title="Follow up the state of this option as the price changes"
-              v-if="'FILLED' === order.status && order.executedQty > 0"
+              v-if="['LIMIT', 'MARKET'].includes(order.type) && 'FILLED' === order.status && order.executedQty > 0"
               class="text-accent ml-5 text-lg"
               :class="{'animate-pulse': orderFollowed(order.orderId)}"
             

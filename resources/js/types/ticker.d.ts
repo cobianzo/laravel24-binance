@@ -56,6 +56,10 @@ export interface OrderBinanceType {
   type: string,
   updateTime: number,
   workingTime: number,
+
+  // extending binance fields with my own date
+  tradeStatus?: string, // if the trade has been closed with an OCO - 'gain' / 'loss' . If is filled but not closed: 'active'
+  GainOrLoss?: number, // the amount in asset currecny (USDT) won or lost.
 }
 
 export interface TripleOrderType {

@@ -11,8 +11,8 @@
   import { getUserOrders, placeBinanceOrder, apiCallTest, getUserBalances } from '@/api/binanceApi';
   import { getOptions, saveOptions } from '@/utils/localStorage-CRUD';
   // import { startWebSocket, closeWebSocket } from '@/utils/websocket-orders';
-  import { formatNumber, stepSizeDecimalsForTicker } from '@/utils/helpers';
-  import { saveTradeGroupsInDBForSymbol, loadTradeGroupsFromDBForSymbol } from '@/utils/tradeTripleOrder-utils';
+  import { formatNumber, stepSizeDecimalsForTicker, getOrderByOrderId } from '@/utils/helpers';
+  import { saveTradeGroupsInDBForSymbol, loadTradeGroupsFromDBForSymbol, computedGainOrLossTripleOrderTrade } from '@/utils/tradeTripleOrder-utils';
   
 
   // Props sent from parent
@@ -38,6 +38,7 @@
   const currentTripleOrder = ref<TripleOrderType>({ originalEntryOrder: null, closingGainOrder: null, closingLossOrder: null });
   const clearCurrentTripleOrder = () => currentTripleOrder.value = { originalEntryOrder: null, closingGainOrder: null, closingLossOrder: null };
   
+  // put in edit mode the colum to link the orders of a triple order setup
   const selectCurrentTripleOrder = function(orderId:string, orderType: string, toggle: boolean = true) {
     const isGain = ['gain', 'LIMIT_MAKER'].includes(orderType);
     const isLoss = ['loss', 'STOP_LOSS_LIMIT'].includes(orderType);
@@ -142,7 +143,7 @@
       return;
     }
     // @TODO: Aparently this is called several times on page LOAD. @TOFIX
-    const tenDaysAgo = Date.now() - 1000 * 60 * 60 * 24 * 10;
+    const tenDaysAgo = Date.now() - 1000 * 60 * 60 * 24 * 365 * 5;
     const response = await getUserOrders( props.selectedTickerInfo.symbol, 500, tenDaysAgo, getOptions( 'hideCanceled' )? true : false ); 
     if (response) {
       // some more validation?
@@ -175,6 +176,7 @@
     }
   }
 
+
   // Watchers
 
   // calculate quantity (asset currency) based on amount (of base currency)
@@ -191,7 +193,30 @@
   watch(
     () => tradesGroupedInTripleOrders,
     (newTradesGroupedInTripleOrders) => {
-      console.log('>>>>>> Watching tradesGroupedInTripleOrders', newTradesGroupedInTripleOrders);
+      
+      console.log('TODELE; Watching tradesGroupedInTripleOrders:');
+      // Here we add data to the orders , extracted from the Order relationshops in trades and the status of the orders.
+      newTradesGroupedInTripleOrders.value.map( (tripeOrderRef: TripleOrderType) => {
+        console.log('>>>>>> Watching 0 ', tripeOrderRef);
+        // examinate the entry order, and see if it's 
+        if (tripeOrderRef.originalEntryOrder) {
+          // find the closing ones:
+          const { originalEntryOrder, closingGainOrder, closingLossOrder} = tripeOrderRef;
+          const gainOrder = getOrderByOrderId(closingGainOrder?? '', orders.value);
+          const lossOrder = getOrderByOrderId(closingLossOrder?? '', orders.value);
+          const indexInOrders = orders.value.findIndex( (order) => order.orderId.toString() === tripeOrderRef.originalEntryOrder?.toString() );
+          const theEntryOrder = orders.value[indexInOrders];
+          if (theEntryOrder && gainOrder && gainOrder.status === 'FILLED' ) {
+            theEntryOrder.tradeStatus = 'GAIN';
+            theEntryOrder.GainOrLoss = computedGainOrLossTripleOrderTrade( theEntryOrder, gainOrder );
+          }
+          if (theEntryOrder && lossOrder && lossOrder.status === 'FILLED') {
+            theEntryOrder.tradeStatus = 'LOSS';
+            theEntryOrder.GainOrLoss = computedGainOrLossTripleOrderTrade( theEntryOrder, lossOrder );
+          }
+        }
+      });
+      // @TODO:
     },
     { deep: true }
   );
@@ -257,7 +282,6 @@
     <div class="trade-orders w-full flex flex-col items-start justify-center text-xsgap-3">
       <Orders
         :orders="orders"
-        :ordersInfoInDB="ordersInfoInDB"
         :tripleOrdersAPI="tripleOrdersAPI"
         :allTickers="props.allTickers"
         :percentages="props.percentages"

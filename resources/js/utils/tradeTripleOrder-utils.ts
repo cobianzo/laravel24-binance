@@ -1,4 +1,4 @@
-import { TripleOrderType } from '@/types/ticker';
+import { OrderBinanceType, TripleOrderType } from '@/types/ticker';
 import axios from 'axios';
 
 export const orderIsSelectedForCreatingATrade 
@@ -17,7 +17,7 @@ export const orderIsSelectedForCreatingATrade
   }
   return '';
 }
-export const numberOrdersMatchingSelected = function(currentTradeCreating : TripleOrderType) : number {
+export const numberOrdersInCurrentTrade = function(currentTradeCreating : TripleOrderType) : number {
   let count = 0;
   count += currentTradeCreating.originalEntryOrder ? 1 : 0;
   count += currentTradeCreating.closingGainOrder ? 1 : 0;
@@ -43,6 +43,16 @@ export const indexMatchingOrder = function (
   return indexFoundNullable;
 }
 
+// returns the orderId for the given property eg 'closingGainOrder',
+export const getMatchingOrder = function( orderId: string, tradesTripleOrdersArray: TripleOrderType[], propertyFromTripleOrder: 'originalEntryOrder' | 'closingGainOrder' | 'closingLossOrder' ) {
+  const index = indexMatchingOrder(orderId, tradesTripleOrdersArray);
+  if (index >= 0) {
+    const tripleOrders = tradesTripleOrdersArray[index];
+    if (tripleOrders && tripleOrders[propertyFromTripleOrder]) 
+      return tripleOrders[propertyFromTripleOrder].toString();
+  }
+  return '';
+}
 
 // All functions to cooperate with backend, loading info from DB.
 
@@ -77,3 +87,14 @@ export const saveTradeGroupsInDBForSymbol = async (symbol: string | undefined, v
     }
   });
 };
+
+
+// computed calculations: 
+
+// 1. calculate the gain or loss of a triple order.
+// pass the complete orders for entry, win or loss.
+export const computedGainOrLossTripleOrderTrade = function( entryOrder: OrderBinanceType, exitOrder: OrderBinanceType ) {
+  // we get the amount spent in the entry order 
+  const amountSpent = parseFloat(entryOrder.cummulativeQuoteQty) - parseFloat(exitOrder.cummulativeQuoteQty);
+  return amountSpent;
+}

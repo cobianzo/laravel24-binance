@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { TickerType, OrderBinanceType } from '@/types/ticker';  
+
+import { OrderBinanceType } from '@/types/ticker';
 
 // Función para obtener el precio de una moneda específica
 // returns { symbol: BTCUSTD, price: 56452.0004344}
