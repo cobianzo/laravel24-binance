@@ -19,11 +19,11 @@ export const getUserBalances = async () => {
 // place orders functions
 export const placeBinanceOrder = async( symbol: string, quantity: number, price: number, side: 'BUY' | 'SELL', type: 'LIMIT' | 'MARKET' = 'LIMIT') => {
   try {
-    console.info('TODELETE: placing a buying order for ', symbol, quantity, price, side, type);
+    console.info('%cTODELETE: placing a buying order for ', 'font-size:2rem; color:white; background:red', symbol, quantity, price, side, type);
     const response = await axios.post(`/binance/place-order`, {
       symbol, quantity, price, side, type
     });
-    console.info('TODELETE respuesta de place order: ',response.data);
+    console.info('%cTODELETE respuesta de place order: ', 'font-size:2rem; color:white; background:red', response.data);
   } catch (error) {
     console.error('Error placing order:', error);
     return null;
@@ -42,10 +42,9 @@ export const placeBinanceOCOOrder = async function (
 ) {
     try {
       // no need of the token. I we remove it, it'll work anyways.
-      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
-      console.log('meta csrf:', csrfToken)
-      console.log('OCO Order placeing... BEFORE successfully:', symbol, side, quantity, price, stopPrice, stopLimitPrice);
+      
+      
+      console.log('%cOCO Order placing... BEFORE successfully:', 'font-size:2rem; color:white; background: darkorange', symbol, side, quantity, price, stopPrice, stopLimitPrice);
       // Enviar los parámetros de la orden OCO al backend
       const response = await axios.post('/binance/order/oco', {
           symbol: symbol,            // Ticker del par (ej: BTCUSDT)
@@ -57,13 +56,13 @@ export const placeBinanceOCOOrder = async function (
         
       },{
         headers: {
-          'X-CSRF-TOKEN': csrfToken
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
         }
       }
     );
 
       // Si la orden es exitosa, imprime los resultados
-      console.log('OCO Order placed successfully:', response.data);
+      console.log('%cOCO Order placed successfully:', 'font-size:2rem; color:white; background: darkorange', response.data);
       return response.data;
     } catch (error) {
       // Manejar errores

@@ -9,7 +9,7 @@ import { formatNumber } from '@/utils/helpers';
 // Props sent from parent
 const props = defineProps<{
   currentPrice: number,
-  entryOrder: OrderBinanceType,
+  entryOrder: OrderBinanceType, // the current order
   percentages: { gain: number, gainPrice: number, loss: number, lossPrice: number },
   selectedTickerInfo: TickerType | null | undefined,
   updateCurrentyEditingOCOOrder: (arg0: string) => void,
@@ -53,7 +53,9 @@ onBeforeUnmount(() => {
 
 </script>
 <template>
-  <div class="space-y-2">
+  <div
+    v-if="['LIMIT', 'MARKET'].includes(entryOrder.type) && ['NEW', 'FILLED'].includes(entryOrder.status)"
+    class="space-y-2">
     <button @click="handleTogggleEditing" 
       class="block w-full text-center">
       Toggle editing
@@ -74,7 +76,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <div class="flex items-center justify-center">
-          {{ formatNumber(props.entryOrder.cummulativeQuoteQty,2) }} {{selectedTickerInfo?.asset}} at <span class="font-bold ml-1">{{ formatNumber(props.entryOrder.price,2) }}</span>
+          {{ formatNumber(props.entryOrder.cummulativeQuoteQty,2) }} {{selectedTickerInfo?.asset}} at <span class="font-bold ml-1">{{ parseFloat(props.entryOrder.price).toFixed(2) }}</span>
         </div>
         <div class="flex">
           <input

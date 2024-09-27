@@ -189,12 +189,14 @@ function handleFollowUpOrder(order: OrderBinanceType) {
               [`status-${order.status.toLowerCase()}`]: true
             }"
         >
-          <td class="px-1 py-0">
+          <td class="the-order-trade-info px-1 py-0">
             {{ order.tradeStatus ?? '' }}
-            {{ order.GainOrLoss ? formatNumber(order.GainOrLoss,1) : '' }}
+            {{ order.GainOrLoss ? formatNumber(order.GainOrLoss,1) 
+              + '&nbsp;' + (props.selectedTickerInfo?.asset?? '') : '' }}
+            <!-- TODO: Create a function that returns the gain or loss  -->
             <!-- TODO: if order.tradeStatus === GAIN or LOSS,calculate the amount.  -->
           </td>
-          <td class="px-1 py-0">{{ new Date(order.time).toLocaleString() }}</td>
+          <td class="the-order-date px-1 py-0">{{ new Date(order.time).toLocaleString() }}</td>
           <td class="py-0 overflow-hidden max-w-[25px] text-center">
             {{ order.type === 'MARKET' ? 'MRK' : (
                 order.type === 'LIMIT' ? 'LMT' : order.type
@@ -264,7 +266,8 @@ function handleFollowUpOrder(order: OrderBinanceType) {
             />
             <button 
               title="Place stop losses gain and loss (OCO order)"
-              v-if="'FILLED' === order.status && ['LIMIT', 'MARKET'].includes(order.type)"
+              v-if="('FILLED' === order.status && ['LIMIT', 'MARKET'].includes(order.type)
+                && (currentlyEditingOCOOrder === order.orderId.toString()))"
               class="text-green-500 text-lg"
               @click="handlePlaceOCOOrderToExitOrder(order)">
               ➽
