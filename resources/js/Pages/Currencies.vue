@@ -6,14 +6,14 @@
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Currencies</h2>
         </template>
-        
+
         <div id="currencies-container" class="py-12" :class="{ 'loading': loading === 'page' }">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
                     <div class="p-6 text-gray-900 dark:text-gray-100">
                         <div class="flex flex-row w-full gap-4">
                             <div class="flex-grow items-center justify-center border-accent border-left-16 flex">
-                                <TradingPanel :selectedTicker="selectedTicker" 
+                                <TradingPanel :selectedTicker="selectedTicker"
                                               @selectCurrentTicker="handleSelectCurrentTicker"
                                               :allTickers="allTickers"
                                               :balances="balances"
@@ -21,17 +21,18 @@
                                               :binancePublicKey="binancePublicKey"
                                 />
                             </div>
-                        </div> 
-                        
+                        </div>
+
 
                         <Spinner v-if="loading === 'portfolio-loading'" :extraClass="'absolute left-1/2'" />
-                        <p>{{ `DEBUG TODELETE ${loading}`  }}</p>
+                        <!-- DEBUG TODELETE  -->
+                        <p>{{ `${loading}`  }}</p>
 
                         <nav class="flex justify-start mb-4" aria-label="Tabs">
-                            <button @click="selectedTab = 'tab-favourites'; saveOptions({ selectedTab: 'tab-favourites' });" 
+                            <button @click="selectedTab = 'tab-favourites'; saveOptions({ selectedTab: 'tab-favourites' });"
                                 :class="{ 'dark:bg-white-700 text-gray-900 hover:text-gray-900 dark:text-white hover:dark:text-white border-b border-accent': selectedTab === 'tab-favourites' }"
                                 class="py-2 px-4 text-gray-500 hover:text-gray-800 dark:text-gray-100 hover:dark:text-accent">Favourites</button>
-                            <button @click="activateBalancesTab" 
+                            <button @click="activateBalancesTab"
                                 :class="{ 'dark:bg-white-700 text-gray-900 hover:text-gray-900 dark:text-white hover:dark:text-white border-b border-accent': selectedTab === 'tab-portfolio' }"
                                 class="py-2 px-4 text-gray-500 hover:text-gray-800 dark:text-gray-100 hover:dark:text-accent">Portfolio</button>
                         </nav>
@@ -39,15 +40,15 @@
                         <div class="mt-4">
                             <div v-show="selectedTab === 'tab-favourites'" class="p-4 mb-2 bg-white rounded-lg shadow-md">
                                 <div class="p-4 bg-gray-100 text-dark font-bold rounded-lg shadow-md flex-col justify-between items-center mb-4">
-                                    <AddFavTicker 
-                                        :allTickers="allTickers" 
-                                        :updateFavTickersFrom="updateFavTickersFrom" 
+                                    <AddFavTicker
+                                        :allTickers="allTickers"
+                                        :updateFavTickersFrom="updateFavTickersFrom"
                                         :exclude="favTickersReactive"
                                         :test="test" />
                                 </div>
-                                <TickersList 
+                                <TickersList
                                     :tickersWithPrice="favTickersWithPrice"
-                                    :deleteTicker="deleteFavTicker" 
+                                    :deleteTicker="deleteFavTicker"
                                     :selectedTicker="selectedTicker"
                                     :dragEndFunction="saveSortedTickers"
                                     :containerId="favourite-tickers"
@@ -55,20 +56,20 @@
                                     :btnFunction="updateFavTickersFrom"
                                     />
                             </div>
-                            <div v-show="selectedTab === 'tab-portfolio'" 
+                            <div v-show="selectedTab === 'tab-portfolio'"
                                 class="p-4 mb-2 bg-white rounded-lg shadow-md text-dark"
                                 :class="{ 'opacity-25': loading === 'portfolio-loading' }"
                                 >
-                                
-                                <BalancesList 
+
+                                <BalancesList
                                     :balances="balances"
                                     :selectBalance="selectBalance"
-                                    :updateLoading="updateLoading" 
+                                    :updateLoading="updateLoading"
                                     :allTickers="allTickers"
                                 />
                             </div>
                         </div>
-                        
+
 
                     </div>
                 </div>
@@ -131,14 +132,14 @@ watchEffect(async () => {
 
   // Use a for-loop to await each async call before pushing to results
   if (favTickersReactive.value && favTickersReactive.value.length) {
-    
+
       for (const s of favTickersReactive.value) {
             console.log('getting price for ', s);
             if (s) {
                 const price = await getBinancePrice(s); // Assuming this is an async function
                 results.push({
                   symbol: s,
-                  price: price  
+                  price: price
                 } as TickerPriceType);
             }
         }
@@ -169,13 +170,13 @@ function saveSortedTickers(event: CustomEvent) {
     loading.value = '#ticker-container';
     const domContainer = document.querySelector('#ticker-container');
     if (domContainer) domContainer.classList.add('loading');
-    
+
     const { oldIndex, newIndex }: { oldIndex: number, newIndex: number } = event as any;
 
     // swap positions
     [favTickersReactive.value[oldIndex], favTickersReactive.value[newIndex]] =
       [favTickersReactive.value[newIndex], favTickersReactive.value[oldIndex]];
-    
+
     const newListAsString: string = Object.values(favTickersReactive.value).join(',');
     console.log('Preparing to save new order', newListAsString );
     if (newListAsString || newListAsString === '') {
@@ -188,19 +189,19 @@ function saveSortedTickers(event: CustomEvent) {
                 console.error('Error al añadir el ticker:', error);
             })
             .finally(() => {
-                if (domContainer) setTimeout( () => { 
+                if (domContainer) setTimeout( () => {
                     loading.value = '';
                     domContainer.classList.remove('loading');
                 } , 1500 );
             })
             ;
     }
-    
+
 }
 
 function deleteFavTicker(tickerSymbol: string): void {
     console.log('CALLED deleteTuicker to PHP (@todelete)', tickerSymbol);
-    
+
     // UI: this will add a transition of opacity for the second that it takes to remove the card.
     const index: number|undefined = favTickersWithPrice.value?.findIndex(t => t.symbol === tickerSymbol);
     if (index !== undefined && index !== -1) favTickersWithPrice.value![index].isDeleting = true;
@@ -213,7 +214,7 @@ function deleteFavTicker(tickerSymbol: string): void {
         console.error(`TODELETE: Error  Deleteing ${tickerSymbol} fav ticker from backend`, error);
         if (index !== undefined && index !== -1) favTickersWithPrice.value![index].isDeleting = false;
     });
-    
+
 }
 
 // => Balances Tab (portfolio)
@@ -230,7 +231,7 @@ function activateBalancesTab() {
 
 /**
  * @TODO: For some reason this fn is called 3 times instead of one
- * on page load. 
+ * on page load.
  */
 const updateAllBalances = async () => {
     if (balances.value === null) {
@@ -242,7 +243,7 @@ const updateAllBalances = async () => {
     }
 }
 
-// => Trading Panel 
+// => Trading Panel
 function handleSelectCurrentTicker( symbol: string ) : void {
     selectedTicker.value = symbol;
     saveOptions({ selectedTicker: symbol });
@@ -264,8 +265,8 @@ onMounted(async () => {
         allTickers.value = allTickersResponse.data;
     } catch (error) {
         throw error;
-    }    
-    
+    }
+
     if (selectedTab.value === 'tab-portfolio') {
         // if on page load the balances are selected, we need to initialize them with a binance call.
         activateBalancesTab()

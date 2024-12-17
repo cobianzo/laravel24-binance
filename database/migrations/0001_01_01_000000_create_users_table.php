@@ -18,8 +18,13 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
 
+            // delete just in case they exist
+            $table->dropColumn('binance_public_key');
+            $table->dropColumn('binance_secret_key');
+            $table->dropColumn('binance_listen_key');
+
             // My fields
-            $table->string('binance_public_key')->nullable()->after('email');
+            $table->string('binance_public_key')->nullable();
             $table->string('binance_secret_key')->nullable();
             $table->string('binance_listen_key')->nullable();
 
@@ -51,10 +56,10 @@ return new class extends Migration
     {
         Schema::dropIfExists('users');
         Schema::dropIfExists('password_reset_tokens');
-        Schema::dropIfExists('sessions');        
-        $table->dropColumn('binance_public_key');
-        $table->dropColumn('binance_secret_key');
-        $table->dropColumn('binance_listen_key');
+        Schema::dropIfExists('sessions');
+        // $table->dropColumn('binance_public_key');
+        // $table->dropColumn('binance_secret_key');
+        // $table->dropColumn('binance_listen_key');
 
     }
 };

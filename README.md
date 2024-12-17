@@ -1,5 +1,7 @@
 # TODO NEXT
 
+Demo video: https://youtu.be/wWxYm20eUE0
+
 The Exit orders should be kind of gray if it was not executed (status EXPIRED).
 They should show
 
@@ -18,12 +20,32 @@ I want that clicking on the action button opens the gain and loss percentages re
 
 # NOTES BY ALVARO
 
+# Basics
+```
+npm install;
+npm run build;
+npm run dev;
+composer install;
+php artisan serve;
+
+and maybe, in order to create all the structure at once:
+
+php artisan config:clear
+php artisan cache:clear
+php artisan migrate
+
+```
+
+You'll need to register a user and log in.
+
+In Binance, you'll have to create an API key and give the right permissions, otherwise you won't be able to place OCO orders through API call.
+
 # Creation step by step
 
 ## Boilerplate
 
 1. Install using Laravel Installer. It helps you to select the setup of the framework. `laravel lar25-binance`
-   It can be made manually (creatin a blank new project with `composer create-project laravel/laravel {proyecto} --prefer-dist`), but this helps
+   It can be made manually (creatin a blank new project with `composer create-project laravel/laravel {proyecto} --prefer-dist`), but this helps.
 2. Create the DB, in this case in MySQL, and set it up the connection credentials in `.env`
 3. Build the frontend with `npm install`, `npm run build`, and then for developmet `npm run dev`
 4. Run the backend server with `art serve` (I created a shortcut for `php artesan` into `art`)

@@ -1,19 +1,19 @@
 <script setup lang="ts">
   // vue
   import { watch, Ref, ref, onMounted, onBeforeUnmount } from 'vue';
-  
+
   // Child components
   import Orders from './Orders.vue';
 
   // types, api, localstorage, helpers
-  import { OrderBinanceType, TickerType, TradeOrderType, TripleOrderType, TripleOrdersAPIType } from '@/types/ticker';  
+  import { OrderBinanceType, TickerType, TradeOrderType, TripleOrderType, TripleOrdersAPIType } from '@/types/ticker';
 
   import { getUserOrders, placeBinanceOrder, apiCallTest, getUserBalances } from '@/api/binanceApi';
   import { getOptions, saveOptions } from '@/utils/localStorage-CRUD';
   // import { startWebSocket, closeWebSocket } from '@/utils/websocket-orders';
   import { formatNumber, stepSizeDecimalsForTicker, getOrderByOrderId } from '@/utils/helpers';
   import { saveTradeGroupsInDBForSymbol, loadTradeGroupsFromDBForSymbol, computedGainOrLossTripleOrderTrade } from '@/utils/tradeTripleOrder-utils';
-  
+
 
   // Props sent from parent
   const props = defineProps<{
@@ -29,25 +29,25 @@
 
   // Reactive vars
   const orders = ref<OrderBinanceType[]|null>(null);
-  
+
   // not in use. If deleted, delete all references
   const ordersInfoInDB = ref<{ order_id: string, order_data: Object, parent_order_id: string|null }[]>([])
 
-  
+
   const tradesGroupedInTripleOrders = ref<TripleOrderType[]>([]);
   const currentTripleOrder = ref<TripleOrderType>({ originalEntryOrder: null, closingGainOrder: null, closingLossOrder: null });
   const clearCurrentTripleOrder = () => currentTripleOrder.value = { originalEntryOrder: null, closingGainOrder: null, closingLossOrder: null };
-  
+
   // put in edit mode the colum to link the orders of a triple order setup
   const selectCurrentTripleOrder = function(orderId:string, orderType: string, toggle: boolean = true) {
     const isGain = ['gain', 'LIMIT_MAKER'].includes(orderType);
     const isLoss = ['loss', 'STOP_LOSS_LIMIT'].includes(orderType);
     // const isOpen = !isGain && !isLoss; // ['NEW', 'PARTIALLY_FILLED']
     let property : 'originalEntryOrder' | 'closingGainOrder' | 'closingLossOrder';
-    property = 'originalEntryOrder'; 
+    property = 'originalEntryOrder';
     if ( isGain ) {
       property = 'closingGainOrder';
-    } else 
+    } else
     if ( isLoss ) {
       property = 'closingLossOrder';
     }
@@ -67,7 +67,7 @@
       if ( currentMatchingArConcatAsArray.includes(matchedSingle.originalEntryOrder) || currentMatchingArConcatAsArray.includes(matchedSingle.closingGainOrder) || currentMatchingArConcatAsArray.includes(matchedSingle.closingLossOrder) ) {
         return false;
       } else {
-        return true;  
+        return true;
       }
     });
     const newTripla = JSON.parse(JSON.stringify(currentTripleOrder.value));
@@ -111,7 +111,7 @@
     }
     console.log('TODELETE: preparing trading at: ', setupTradeData);
     props.updateTradeOrder(setupTradeData);
-    
+
   }
   function handlePlaceOrder() {
     const { symbol, quantity, price, side, type } = props.theTrade;
@@ -129,7 +129,7 @@
 
 
 
-  
+
 
   // Methods
   const syncOrdersForSelectedTicker = async( reset:boolean = true) => {
@@ -144,7 +144,7 @@
     }
     // @TODO: Aparently this is called several times on page LOAD. @TOFIX
     const tenDaysAgo = Date.now() - 1000 * 60 * 60 * 24 * 365 * 5;
-    const response = await getUserOrders( props.selectedTickerInfo.symbol, 500, tenDaysAgo, getOptions( 'hideCanceled' )? true : false ); 
+    const response = await getUserOrders( props.selectedTickerInfo.symbol, 500, tenDaysAgo, getOptions( 'hideCanceled' )? true : false );
     if (response) {
       // some more validation?
       // @TODO: can we ask only for recent orders in the endpoint already?
@@ -160,11 +160,11 @@
 
       // now that we have initialized the orders, we want to start the websocket to update
       // it incase a new order comes in.
-    
+
       // closeWebSocket();
       // const ws = await startWebSocket(); // websocket is also stored in window.wsOrders
       // console.log('>>>>>> This is the ws', ws);
-      
+
       // ws.onmessage = (event) => {
       //   const data = JSON.parse(event.data);
       //   console.log('>>>>> WS. ', data);
@@ -172,7 +172,7 @@
       //     updateOrders(data.data);
       //   }
       // };
-      
+
     }
   }
 
@@ -193,12 +193,12 @@
   watch(
     () => tradesGroupedInTripleOrders,
     (newTradesGroupedInTripleOrders) => {
-      
+
       console.log('TODELE; Watching tradesGroupedInTripleOrders:');
       // Here we add data to the orders , extracted from the Order relationshops in trades and the status of the orders.
       newTradesGroupedInTripleOrders.value.map( (tripeOrderRef: TripleOrderType) => {
         console.log('>>>>>> Watching 0 ', tripeOrderRef);
-        // examinate the entry order, and see if it's 
+        // examinate the entry order, and see if it's
         if (tripeOrderRef.originalEntryOrder) {
           // find the closing ones:
           const { originalEntryOrder, closingGainOrder, closingLossOrder} = tripeOrderRef;
@@ -230,10 +230,10 @@
       }
     }
   );
-  
+
   // Lifecycle
   onMounted(() => {
-    
+
   });
 
   onBeforeUnmount(() => {
@@ -247,11 +247,13 @@
 
     <div class="trade-data mt-5 flex flex-col items-start justify-center w-full text-xs gap-3">
       <div class="flex flex-row gap-3 justify-between w-full">
-        <button @click="updateMiTest">TEST TODELTEE</button>
+        <button @click="updateMiTest">
+            <!-- TEST TODELTEE -->
+        </button>
         <button class="inline-flexitems-center px-4 py-2 border border-transparent text-center shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex-none"
           @click="handleUpdateTradeOrder">update</button>
-        
-        <button class="inline-flex items-center px-4 py-2 border border-transparent text-center shadow-sm 
+
+        <button class="inline-flex items-center px-4 py-2 border border-transparent text-center shadow-sm
            rounded-md font-medium text-sm justify-center text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           @click="handlePlaceOrder">
           ➽ Place order
@@ -269,13 +271,13 @@
       <div class="flex flex-1 flex-row justify-between gap-4">
         <span class="text-center">type<br/> {{ props.theTrade.type }}</span>
         <span class="text-center">quantity<br/> {{ props.theTrade.quantity }}</span>
-          
+
         <span class="text-center flex flex-col">
           <b>price</b>
           <input class="text-xs w-[90px] px-2 py-1 border rounded-md" type="number" step="0.01" v-model="props.theTrade.price" />
-          <em>{{ formatNumber(props.theTrade.price - props.price, 2) }}</em>  
+          <em>{{ formatNumber(props.theTrade.price - props.price, 2) }}</em>
         </span>
-        
+
       </div>
     </div>
 
